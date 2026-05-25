@@ -1,0 +1,72 @@
+name: Training Pipeline - Daily Model Retraining
+
+on:
+  schedule:
+    # Run every day at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  training-pipeline:
+    name: Run Training Pipeline
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Create .env file
+        env:
+          AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+          CITY: ${{ secrets.CITY || 'karachi' }}
+          CITY_LAT: ${{ secrets.CITY_LAT || '24.8607' }}
+          CITY_LON: ${{ secrets.CITY_LON || '67.0011' }}
+        run: |
+          echo "AQICN_API_KEY=$AQICN_API_KEY" >> .env
+          echo "OPENWEATHER_API_KEY=$OPENWEATHER_API_KEY" >> .env
+          echo "HOPSWORKS_API_KEY=$HOPSWORKS_API_KEY" >> .env
+          echo "CITY=$CITY" >> .env
+          echo "CITY_LAT=$CITY_LAT" >> .env
+          echo "CITY_LON=$CITY_LON" >> .env
+      
+      - name: Validate configuration
+        run: python main.py --check-config
+      
+      - name: Run training pipeline
+        run: python main.py --pipeline train
+      
+      - name: Upload trained models as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-models
+          path: models/
+          retention-days: 30
+      
+      - name: Upload model comparison as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-comparison
+          path: models/model_comparison.csv
+          retention-days: 30
+      
+      - name: Commit and push models (optional)
+        if: github.event_name == 'schedule'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add models/
+          git diff --staged --quiet || git commit -m "Update trained models [skip ci]"
+          git push

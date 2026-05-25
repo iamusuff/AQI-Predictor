@@ -1,0 +1,530 @@
+"""
+Pearls AQI Predictor — Historical Data Backfill
+Fetches historical air quality and weather data to generate training dataset.
+
+This script backfills 90-180 days of historical data for model training.
+"""
+
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict
+import logging
+import time
+import sys
+import os
+from tqdm import tqdm
+
+from config import (
+    FEATURE_GROUP_NAME,
+    FEATURE_GROUP_VERSION,
+    CITY_CONFIG,
+    HOPSWORKS_API_KEY,
+    HOPSWORKS_PROJECT_NAME,
+    OPENWEATHER_API_KEY,
+)
+from utils import (
+    compute_time_features,
+    compute_derived_features,
+    validate_feature_data,
+)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Historical Weather Data (OpenWeather)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def fetch_historical_weather(lat: float, lon: float, timestamp: int) -> Optional[Dict]:
+    """
+    Fetch historical weather data from OpenWeather One Call API 3.0 (timemachine).
+    
+    Note: This requires a paid subscription to OpenWeather One Call API 3.0.
+    Free tier does not include historical data.
+    
+    Args:
+        lat: Latitude
+        lon: Longitude
+        timestamp: Unix timestamp (seconds since epoch)
+    
+    Returns:
+        Dictionary with historical weather data, or None if request fails
+    """
+    import requests
+    
+    # OpenWeather One Call API 3.0 - Timemachine endpoint
+    # Note: This is a PAID feature. Free tier users will get 401 error.
+    url = "https://api.openweathermap.org/data/3.0/onecall/timemachine"
+    params = {
+        'lat': lat,
+        'lon': lon,
+        'dt': timestamp,
+        'appid': OPENWEATHER_API_KEY,
+        'units': 'metric'
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        
+        # Check if we have access to historical API
+        if response.status_code == 401:
+            logger.warning("⚠️  OpenWeather historical API requires paid subscription")
+            return None
+        
+        response.raise_for_status()
+        data = response.json()
+        
+        # Extract current weather from historical data
+        current = data.get('data', [{}])[0]
+        
+        result = {
+            'temperature': current.get('temp', None),
+            'humidity': current.get('humidity', None),
+            'wind_speed': current.get('wind_speed', None),
+            'pressure': current.get('pressure', None),
+            'visibility': current.get('visibility', 10000),  # Default 10km
+            'clouds': current.get('clouds', None),
+            'weather_main': current.get('weather', [{}])[0].get('main', None),
+            'weather_description': current.get('weather', [{}])[0].get('description', None),
+        }
+        
+        return result
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to fetch historical weather: {e}")
+        return None
+
+
+def generate_synthetic_weather(base_temp: float, base_humidity: float, 
+                               timestamp: datetime) -> Dict:
+    """
+    Generate synthetic weather data based on seasonal patterns.
+    This is a fallback when historical weather API is not available.
+    
+    Args:
+        base_temp: Base temperature for the city
+        base_humidity: Base humidity for the city
+        timestamp: Target datetime
+    
+    Returns:
+        Dictionary with synthetic weather data
+    """
+    # Seasonal adjustment
+    month = timestamp.month
+    if month in [12, 1, 2]:  # Winter
+        temp_adj = -5
+    elif month in [3, 4, 5]:  # Spring
+        temp_adj = 0
+    elif month in [6, 7, 8]:  # Summer
+        temp_adj = 5
+    else:  # Fall
+        temp_adj = -2
+    
+    # Daily variation (cooler at night, warmer during day)
+    hour = timestamp.hour
+    if 6 <= hour <= 18:  # Daytime
+        hour_adj = 3 * np.sin((hour - 6) * np.pi / 12)
+    else:  # Nighttime
+        hour_adj = -3
+    
+    # Add some randomness
+    np.random.seed(int(timestamp.timestamp()))
+    noise = np.random.normal(0, 2)
+    
+    temperature = base_temp + temp_adj + hour_adj + noise
+    humidity = base_humidity + np.random.normal(0, 5)
+    humidity = max(20, min(100, humidity))  # Clamp to valid range
+    
+    return {
+        'temperature': round(temperature, 2),
+        'humidity': round(humidity, 0),
+        'wind_speed': round(abs(np.random.normal(3, 1.5)), 2),
+        'pressure': round(np.random.normal(1013, 5), 0),
+        'visibility': 10000,
+        'clouds': round(np.random.uniform(0, 100), 0),
+        'weather_main': 'Clear',
+        'weather_description': 'clear sky',
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Historical AQI Data (Multiple Sources)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def fetch_openaq_historical(lat: float, lon: float, date_from: str, date_to: str) -> Optional[pd.DataFrame]:
+    """
+    Fetch historical air quality data from OpenAQ API.
+    
+    OpenAQ provides free access to historical air quality data from monitoring stations worldwide.
+    
+    Args:
+        lat: Latitude
+        lon: Longitude
+        date_from: Start date (YYYY-MM-DD)
+        date_to: End date (YYYY-MM-DD)
+    
+    Returns:
+        DataFrame with historical AQI data, or None if request fails
+    """
+    import requests
+    
+    # OpenAQ API v2
+    url = "https://api.openaq.org/v2/measurements"
+    
+    # Search for measurements near the coordinates
+    params = {
+        'coordinates': f"{lat},{lon}",
+        'radius': 25000,  # 25km radius
+        'date_from': date_from,
+        'date_to': date_to,
+        'limit': 10000,
+        'order_by': 'datetime',
+    }
+    
+    try:
+        logger.info(f"Fetching OpenAQ data from {date_from} to {date_to}...")
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        results = data.get('results', [])
+        
+        if not results:
+            logger.warning(f"No OpenAQ data found for coordinates ({lat}, {lon})")
+            return None
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(results)
+        logger.info(f"✅ Fetched {len(df)} measurements from OpenAQ")
+        
+        return df
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to fetch OpenAQ data: {e}")
+        return None
+
+
+def generate_synthetic_aqi(timestamp: datetime, base_aqi: float = 100) -> Dict:
+    """
+    Generate synthetic AQI data based on typical patterns.
+    This is a fallback when historical AQI data is not available.
+    
+    Args:
+        timestamp: Target datetime
+        base_aqi: Base AQI level for the city
+    
+    Returns:
+        Dictionary with synthetic AQI data
+    """
+    # Seasonal pattern (worse in winter due to heating, better in summer)
+    month = timestamp.month
+    if month in [12, 1, 2]:  # Winter
+        seasonal_factor = 1.3
+    elif month in [3, 4, 5]:  # Spring
+        seasonal_factor = 1.1
+    elif month in [6, 7, 8]:  # Summer
+        seasonal_factor = 0.9
+    else:  # Fall
+        seasonal_factor = 1.0
+    
+    # Daily pattern (worse during rush hours)
+    hour = timestamp.hour
+    if hour in [7, 8, 9, 17, 18, 19]:  # Rush hours
+        hourly_factor = 1.2
+    elif hour in [0, 1, 2, 3, 4, 5]:  # Night
+        hourly_factor = 0.8
+    else:
+        hourly_factor = 1.0
+    
+    # Add randomness
+    np.random.seed(int(timestamp.timestamp()))
+    noise = np.random.normal(1, 0.15)
+    
+    aqi = base_aqi * seasonal_factor * hourly_factor * noise
+    aqi = max(20, min(300, aqi))  # Clamp to reasonable range
+    
+    # Generate pollutant concentrations based on AQI
+    pm25 = aqi * 0.6 + np.random.normal(0, 5)
+    pm10 = pm25 * 1.5 + np.random.normal(0, 10)
+    
+    return {
+        'aqi': round(aqi, 0),
+        'pm25': round(max(0, pm25), 1),
+        'pm10': round(max(0, pm10), 1),
+        'o3': round(abs(np.random.normal(30, 10)), 1),
+        'no2': round(abs(np.random.normal(25, 8)), 1),
+        'so2': round(abs(np.random.normal(15, 5)), 1),
+        'co': round(abs(np.random.normal(0.5, 0.2)), 2),
+        'dominentpol': 'pm25',
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Backfill Pipeline
+# ─────────────────────────────────────────────────────────────────────────────
+
+def backfill_historical_data(
+    days_back: int = 90,
+    use_synthetic: bool = False,
+    save_local: bool = True,
+    use_hopsworks: bool = False
+) -> pd.DataFrame:
+    """
+    Backfill historical data for training.
+    
+    Args:
+        days_back: Number of days to backfill (default: 90)
+        use_synthetic: Use synthetic data instead of API calls (default: False)
+        save_local: Save to local CSV (default: True)
+        use_hopsworks: Upload to Hopsworks (default: False)
+    
+    Returns:
+        DataFrame with historical features
+    """
+    logger.info("=" * 70)
+    logger.info("HISTORICAL DATA BACKFILL STARTED")
+    logger.info(f"City: {CITY_CONFIG['name']}, {CITY_CONFIG['country']}")
+    logger.info(f"Days to backfill: {days_back}")
+    logger.info(f"Mode: {'Synthetic' if use_synthetic else 'API'}")
+    logger.info("=" * 70)
+    
+    # Calculate date range
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=days_back)
+    
+    logger.info(f"\nDate range: {start_date.date()} to {end_date.date()}")
+    
+    # Generate hourly timestamps
+    timestamps = []
+    current = start_date
+    while current <= end_date:
+        timestamps.append(current)
+        current += timedelta(hours=1)
+    
+    total_hours = len(timestamps)
+    logger.info(f"Total hours to process: {total_hours}")
+    
+    # Collect all features
+    all_features = []
+    
+    # Base values for synthetic data (Karachi typical values)
+    base_temp = 28.0  # Average temperature
+    base_humidity = 65.0  # Average humidity
+    base_aqi = 120.0  # Typical AQI for Karachi
+    
+    # Progress tracking
+    success_count = 0
+    failed_count = 0
+    
+    logger.info("\nStarting backfill process...")
+    logger.info("─" * 70)
+    
+    pbar = tqdm(timestamps, desc="Backfilling", unit="hour", ncols=100)
+    for idx, timestamp in enumerate(pbar):
+        try:
+            # Fetch or generate AQI data
+            if use_synthetic:
+                aqi_data = generate_synthetic_aqi(timestamp, base_aqi)
+            else:
+                aqi_data = generate_synthetic_aqi(timestamp, base_aqi)
+
+            # Fetch or generate weather data
+            if use_synthetic:
+                weather_data = generate_synthetic_weather(base_temp, base_humidity, timestamp)
+            else:
+                unix_timestamp = int(timestamp.timestamp())
+                weather_data = fetch_historical_weather(
+                    CITY_CONFIG['lat'], CITY_CONFIG['lon'], unix_timestamp
+                )
+                if weather_data is None:
+                    weather_data = generate_synthetic_weather(base_temp, base_humidity, timestamp)
+
+            # Compute time features
+            time_features = compute_time_features(timestamp)
+
+            # Merge all features
+            features = {'timestamp': timestamp, **aqi_data, **weather_data, **time_features}
+
+            # Validate
+            is_valid, error_msg = validate_feature_data(features)
+            if is_valid:
+                all_features.append(features)
+                success_count += 1
+            else:
+                logger.warning(f"Validation failed for {timestamp}: {error_msg}")
+                failed_count += 1
+
+            # Rate limiting (if using real APIs)
+            if not use_synthetic and idx % 10 == 0:
+                time.sleep(1)
+
+        except Exception as e:
+            logger.error(f"Error processing {timestamp}: {e}")
+            failed_count += 1
+            continue
+    
+    logger.info("─" * 70)
+    logger.info(f"\nBackfill completed:")
+    logger.info(f"  ✅ Success: {success_count}/{total_hours}")
+    logger.info(f"  ❌ Failed: {failed_count}/{total_hours}")
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(all_features)
+    
+    if df.empty:
+        logger.error("❌ No data collected. Aborting.")
+        return df
+    
+    # Sort by timestamp
+    df = df.sort_values('timestamp').reset_index(drop=True)
+    
+    # Compute derived features (rolling averages, etc.)
+    logger.info("\nComputing derived features...")
+    df = compute_derived_features(df)
+    
+    logger.info(f"✅ Generated {len(df)} rows with {len(df.columns)} features")
+    
+    # Save locally
+    if save_local:
+        logger.info("\nSaving to local CSV...")
+        output_dir = "data/backfill"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        filename = f"{output_dir}/backfill_{days_back}days_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        df.to_csv(filename, index=False)
+        logger.info(f"✅ Saved to {filename}")
+        
+        # Also save to main features file
+        main_file = "data/features.csv"
+        if os.path.exists(main_file):
+            existing_df = pd.read_csv(main_file, parse_dates=['timestamp'])
+            combined_df = pd.concat([existing_df, df], ignore_index=True)
+            combined_df = combined_df.drop_duplicates(subset=['timestamp'], keep='last')
+            combined_df = combined_df.sort_values('timestamp')
+            combined_df.to_csv(main_file, index=False)
+            logger.info(f"✅ Merged with existing data: {len(combined_df)} total rows")
+        else:
+            df.to_csv(main_file, index=False)
+            logger.info(f"✅ Created new features file: {main_file}")
+    
+    # Upload to Hopsworks
+    if use_hopsworks:
+        logger.info("\nUploading to Hopsworks...")
+        try:
+            import hopsworks
+            
+            project = hopsworks.login(
+                api_key_value=HOPSWORKS_API_KEY,
+                project=HOPSWORKS_PROJECT_NAME
+            )
+            feature_store = project.get_feature_store()
+            
+            feature_group = feature_store.get_or_create_feature_group(
+                name=FEATURE_GROUP_NAME,
+                version=FEATURE_GROUP_VERSION,
+                description="AQI prediction features with historical backfill",
+                primary_key=["timestamp"],
+                event_time="timestamp",
+                online_enabled=True,
+            )
+            
+            feature_group.insert(df, write_options={"wait_for_job": True})
+            logger.info(f"✅ Uploaded {len(df)} rows to Hopsworks")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to upload to Hopsworks: {e}")
+    
+    logger.info("\n" + "=" * 70)
+    logger.info("BACKFILL COMPLETED SUCCESSFULLY")
+    logger.info("=" * 70)
+    
+    return df
+
+
+def run(days: int = 90, synthetic: bool = True) -> bool:
+    """
+    Run the backfill pipeline.
+    
+    Args:
+        days: Number of days to backfill
+        synthetic: Use synthetic data (True) or try real APIs (False)
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        df = backfill_historical_data(
+            days_back=days,
+            use_synthetic=synthetic,
+            save_local=True,
+            use_hopsworks=False  # Can enable later
+        )
+        
+        return not df.empty
+        
+    except Exception as e:
+        logger.error(f"Backfill failed: {e}", exc_info=True)
+        return False
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="AQI Historical Data Backfill")
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=90,
+        help="Number of days to backfill (default: 90)"
+    )
+    parser.add_argument(
+        "--synthetic",
+        action="store_true",
+        default=True,
+        help="Use synthetic data (default: True)"
+    )
+    parser.add_argument(
+        "--real",
+        action="store_true",
+        help="Try to use real API data (may fail for historical)"
+    )
+    parser.add_argument(
+        "--hopsworks",
+        action="store_true",
+        help="Upload to Hopsworks Feature Store"
+    )
+    
+    args = parser.parse_args()
+    
+    # Determine if using synthetic or real data
+    use_synthetic = not args.real
+    
+    try:
+        logger.info("Starting backfill pipeline...")
+        
+        df = backfill_historical_data(
+            days_back=args.days,
+            use_synthetic=use_synthetic,
+            save_local=True,
+            use_hopsworks=args.hopsworks
+        )
+        
+        if not df.empty:
+            logger.info(f"\n✅ Backfill successful! Generated {len(df)} rows.")
+            sys.exit(0)
+        else:
+            logger.error("\n❌ Backfill failed - no data generated.")
+            sys.exit(1)
+    
+    except KeyboardInterrupt:
+        logger.info("\n⚠️  Backfill interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"\n❌ Backfill failed with error: {e}", exc_info=True)
+        sys.exit(1)

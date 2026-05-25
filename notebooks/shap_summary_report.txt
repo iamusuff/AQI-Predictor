@@ -1,0 +1,53 @@
+======================================================================
+SHAP ANALYSIS SUMMARY REPORT
+======================================================================
+
+MODEL INFORMATION
+----------------------------------------------------------------------
+Model: ridge_regression
+Test R²: 0.9996
+Test RMSE: 0.59
+Test MAE: 0.46
+
+TOP 10 FEATURES (by Mean |SHAP|)
+----------------------------------------------------------------------
+pm25                            19.1062
+humidity                         5.9079
+pm10                             5.7227
+wind_pm25_interaction            0.9618
+pm25_pm10_ratio                  0.8600
+aqi_rolling_3h                   0.5085
+temperature                      0.4164
+temp_humidity_interaction        0.3882
+wind_speed                       0.2830
+pm25_rolling_3h                  0.2356
+
+ALERT STATISTICS
+----------------------------------------------------------------------
+Total Predictions: 350
+Alerts Triggered: 307
+Alert Rate: 87.7%
+
+Alert Level Distribution:
+  YELLOW: 216 (70.4%)
+  ORANGE: 88 (28.7%)
+  RED: 3 (1.0%)
+
+AQI Category Distribution (Alerts Only):
+  Unhealthy for Sensitive: 216
+  Unhealthy: 86
+  Very Unhealthy: 3
+  Hazardous: 2
+
+======================================================================
+GENERATED FILES
+======================================================================
+1. shap_01_summary_plot.png - Global feature importance
+2. shap_02_bar_plot.png - Mean absolute SHAP values
+3. shap_03_waterfall_sample_*.png - Individual predictions (3 samples)
+4. shap_04_dependence_*.png - Feature interactions (top 5 features)
+5. shap_05_alert_distribution.png - Alert threshold analysis
+6. shap_alert_report.csv - Detailed alert information
+7. shap_summary_report.txt - This report
+
+======================================================================

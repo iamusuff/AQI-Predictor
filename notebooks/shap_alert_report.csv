@@ -1,0 +1,308 @@
+sample_idx,aqi,category,alert_level,threshold,action
+0,179.00869990040667,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+1,137.88159194422877,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+2,145.02046535406015,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+3,136.26289508285396,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+4,125.97858360338381,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+5,127.17737040630671,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+6,114.8830135000608,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+7,107.18602885474104,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+8,158.16588357794822,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+9,168.54862707325242,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+10,209.83003244747601,Very Unhealthy,RED,200,Everyone should avoid prolonged outdoor exertion
+11,155.36441485890327,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+12,113.25955752071076,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+13,105.09341664786818,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+14,114.92458960330137,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+15,134.8963123847289,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+16,107.61761799507148,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+17,141.78497685085873,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+18,119.80410279746397,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+19,130.6667146363588,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+20,134.3500205990759,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+22,110.28157767053722,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+23,110.71855571257862,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+24,134.113639535764,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+25,106.58461908494047,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+26,102.39571262567327,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+27,109.57922385262812,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+28,109.00479921673309,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+29,121.69493502146125,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+30,113.6781978846827,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+31,122.00279312999727,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+32,121.6225131322552,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+33,139.4697174184851,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+34,159.40175832532984,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+35,165.7745810211348,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+36,171.0655317716058,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+37,187.2851848886764,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+38,146.68529630829255,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+40,181.68195484262236,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+41,145.61858934960654,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+42,167.3996003713731,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+43,143.31397891078674,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+44,146.23595218768634,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+45,140.39038073632318,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+46,131.4852701191732,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+48,133.9028035419743,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+49,162.65494362339797,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+50,111.84630255874552,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+51,170.22211478735417,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+52,139.25217532444822,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+53,226.17270861200512,Very Unhealthy,RED,200,Everyone should avoid prolonged outdoor exertion
+54,137.78178997509104,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+55,140.96976380975258,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+56,166.71804119244118,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+57,156.3976991943062,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+58,137.3980575068318,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+59,135.69747729416116,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+60,155.79104296002492,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+61,168.8299145727408,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+62,125.76462421891583,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+63,124.90875286567902,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+64,126.34219862197796,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+65,123.75423530447097,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+66,103.61270871728927,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+67,118.51160118629085,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+69,110.53818737718609,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+70,109.11373585268552,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+71,104.86112670364832,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+73,117.71397496098294,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+75,107.44240540603585,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+78,145.27850271743398,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+79,170.19982522798864,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+80,184.9196756710525,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+81,170.32548440782116,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+82,149.5120284075628,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+83,171.14435337769135,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+84,168.92809062454512,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+85,194.01145858040414,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+86,152.1205127391192,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+87,146.49560906850522,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+88,151.60134766332132,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+89,153.3541003705838,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+90,131.85372858142225,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+91,152.67060158549288,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+92,160.70003883841846,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+94,118.13981161502326,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+95,139.27541282031925,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+96,138.06880177360006,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+98,127.3753142519347,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+99,133.96349702551845,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+100,149.90836645143816,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+101,186.76345152694185,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+102,149.0766862139679,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+103,162.49333873392195,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+104,166.41830749937466,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+105,173.64959699864886,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+106,128.45284112954926,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+108,128.17996310766944,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+109,149.92889851807914,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+110,114.10402246129681,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+111,121.43787424744416,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+112,142.5518459069596,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+113,124.9532834976578,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+114,111.14056898882178,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+117,101.56846954100861,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+119,101.13887728503519,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+120,138.66509768246533,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+127,123.9235535600713,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+128,164.9791911245338,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+129,144.85016434207853,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+130,158.805810757848,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+131,183.77234771658283,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+132,183.90050461445543,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+133,162.66026036176788,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+134,126.27165251437769,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+135,123.78231781339542,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+136,102.41052683778676,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+137,134.80664461113918,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+138,138.90445419456472,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+139,122.5656295174019,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+140,129.94523517113393,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+141,129.39080988154632,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+142,120.93944530942122,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+144,160.00977139202814,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+145,101.22902812841058,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+146,119.7940860996229,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+147,146.13891456992872,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+148,162.39990996651713,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+149,129.91530730726416,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+150,150.55131959433106,Hazardous,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+151,127.5552625586713,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+152,150.77573142721772,Hazardous,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+153,151.4492123148897,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+154,122.49079871054596,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+155,118.70534395395946,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+156,140.85934730735283,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+157,134.47762903655465,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+158,116.07204626710688,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+159,166.76572186993678,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+160,126.50873821866217,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+161,132.69878373424623,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+163,112.85654200509686,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+165,106.61094680745964,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+166,133.44284451460217,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+169,107.46174457816758,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+170,118.98896816706792,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+171,127.61257172311095,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+172,103.1724819188413,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+174,115.17128016625742,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+175,107.90450916792449,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+176,151.40092621623506,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+177,179.78298727256515,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+178,192.9598242647951,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+179,135.81750602132664,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+180,181.92517138808495,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+181,144.24954555017445,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+182,149.56997739221018,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+183,138.44689811713639,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+184,123.58756617459719,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+185,145.93720961103648,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+186,133.94011611644757,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+187,117.48897004488086,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+188,131.88277523956475,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+189,103.24203995521488,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+190,160.13237547303896,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+191,110.84625598173609,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+192,136.66871549157102,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+193,124.43427804937795,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+194,116.21781739772435,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+195,136.38640404443862,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+196,179.85335886223163,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+197,178.89355456199846,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+198,164.25215957331298,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+199,190.55709683611332,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+200,182.14255571232545,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+201,138.6778052480595,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+202,139.95085671124977,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+203,119.9378250400674,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+204,128.69732905201886,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+205,144.04829806610084,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+206,169.02595458362543,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+207,144.85219576118888,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+208,156.29368869012728,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+209,138.4947912383213,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+210,118.8092990343412,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+211,128.7781365812945,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+213,109.11769357039927,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+215,108.81181640967665,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+218,110.88837083980604,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+219,101.58491980500179,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+221,115.83606231542655,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+222,135.75579293298662,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+223,193.4296883715264,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+224,183.09905766529485,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+225,176.56547129199973,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+226,148.25838748245437,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+227,152.3146161174272,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+228,146.06883364111917,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+229,166.7193438176438,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+231,158.559724855481,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+232,135.83845903909722,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+233,127.50862505833356,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+234,127.56665268147728,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+235,125.27097773866487,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+236,132.21168695257097,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+237,157.08134983394595,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+238,140.46871471947796,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+239,121.05564254581597,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+240,153.2878953233982,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+241,132.9025846637465,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+242,115.99671296973787,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+243,140.09079877124137,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+244,135.78157461060107,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+245,128.4880890426789,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+246,184.16582902117767,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+247,201.61040071497166,Very Unhealthy,RED,200,Everyone should avoid prolonged outdoor exertion
+248,128.87390745842276,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+249,140.90376156908394,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+250,135.70710001493757,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+251,105.37251117846293,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+252,136.4984723249152,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+253,115.884786489489,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+254,132.91059757070988,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+255,132.2132493415907,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+256,130.75719381671297,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+257,143.85409572216653,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+258,108.71901456217459,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+259,106.27441861482727,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+262,121.71105400813792,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+263,108.35887362074081,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+264,103.21498480379225,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+265,109.01516736380242,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+266,116.64148943749036,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+270,145.79288009316,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+271,153.82346090095987,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+272,159.35914652493577,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+273,191.04745490420973,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+274,155.13514195134803,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+275,166.02473491784085,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+276,146.96310265148202,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+277,140.39929913310436,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+278,107.50841605843922,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+279,137.4120125434216,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+280,117.57019008164548,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+281,130.82925904751224,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+282,127.6146760005799,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+283,110.73492756201277,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+284,106.68618406188722,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+285,138.28204612796947,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+286,138.8989615166939,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+287,114.46718860949639,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+289,116.92489764937224,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+290,189.59585533424823,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+291,139.8178100273498,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+292,172.18021085353797,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+293,179.66501720849294,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+294,152.35632978916902,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+295,105.03421734800757,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+296,170.75692053765022,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+297,176.78698516809112,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+298,154.05103335786288,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+299,138.8807427870362,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+300,153.03633887436803,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+301,114.41988874878173,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+302,110.12956310210119,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+303,113.97793490438909,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+304,158.82620569646332,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+305,111.01504069675472,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+306,116.8422191810584,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+308,109.80277648259045,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+309,113.03124848634064,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+310,118.20587256900282,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+312,108.40255517103697,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+313,141.40793818309388,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+316,117.78976672723122,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+317,105.55579597612873,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+318,111.90117754981758,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+319,112.55158763385302,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+320,172.8471863402808,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+321,153.19175022867856,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+322,154.53657693183138,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+323,147.0762135092877,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+324,151.37301546155868,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+325,182.3143219861446,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+326,130.3617133902618,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+327,131.96247215742247,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+328,105.71694652222375,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+329,109.88376396177897,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+330,144.65429555400928,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+331,101.33608478916716,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+332,126.01392437275575,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+333,143.06041314239513,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+334,110.96371505831453,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+335,140.48587439256383,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+336,153.23225613317817,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+337,129.86950737215534,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+338,111.11364400574075,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+339,131.4360072364549,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+340,167.29452842696938,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+341,166.88451069975937,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+342,164.3722495207291,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+343,132.5122897596551,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+344,176.7608296289918,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+345,188.65215608009623,Unhealthy,ORANGE,150,Everyone should reduce prolonged outdoor exertion
+346,135.02527486531602,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+348,144.14835512836436,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
+349,129.45095505153654,Unhealthy for Sensitive,YELLOW,100,Sensitive groups should reduce outdoor activity
