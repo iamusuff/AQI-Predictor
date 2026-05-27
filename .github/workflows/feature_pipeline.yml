@@ -46,8 +46,14 @@ jobs:
           echo "CITY_LAT=$CITY_LAT" >> .env
           echo "CITY_LON=$CITY_LON" >> .env
 
-      - name: Debug connectivity
+      - name: Fix DNS and debug connectivity
         run: |
+          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+          echo "nameserver 1.1.1.1" | sudo tee -a /etc/resolv.conf
+
+          nslookup c.app.hopsworks.ai || true
+          ping -c 2 c.app.hopsworks.ai || true
+
           python -c "import socket; print(socket.gethostbyname('c.app.hopsworks.ai'))"
 
       - name: Validate configuration
