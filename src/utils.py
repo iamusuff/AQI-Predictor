@@ -305,6 +305,18 @@ def compute_features(aqi_data: Dict, weather_data: Dict) -> Dict:
     # Add timestamp
     features['timestamp'] = timestamp
     
+    FLOAT_FIELDS = [
+        'aqi', 'pm25', 'pm10', 'o3', 'no2', 'so2', 'co',
+        'temperature', 'humidity', 'wind_speed', 'pressure',
+        'dew_point', 'wind_gust', 'visibility'
+    ]
+
+    for field in FLOAT_FIELDS:
+        if field in features:
+            features[field] = float(features[field])
+
+    return features
+
     return features
 
 
