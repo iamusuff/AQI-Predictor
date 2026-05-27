@@ -72,3 +72,5 @@ logs/
 *.tmp
 *.bak
 .cache/
+
+instructions.txt
