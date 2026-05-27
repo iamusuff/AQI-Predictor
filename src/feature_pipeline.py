@@ -167,22 +167,53 @@ def save_features_locally(features_df: pd.DataFrame, filepath: str = "data/featu
     
     # Create directory if it doesn't exist
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    
+
+    # Ensure timestamp is timezone-aware UTC
+    features_df['timestamp'] = pd.to_datetime(
+        features_df['timestamp'],
+        utc=True
+    )
+
     # Append to existing file or create new one
     if os.path.exists(filepath):
-        existing_df = pd.read_csv(filepath, parse_dates=['timestamp'])
-        combined_df = pd.concat([existing_df, features_df], ignore_index=True)
-        
-        # Remove duplicates (keep latest)
-        combined_df = combined_df.drop_duplicates(subset=['timestamp'], keep='last')
-        combined_df = combined_df.sort_values('timestamp')
-        
-        combined_df.to_csv(filepath, index=False)
-        logger.info(f"✅ Appended features to {filepath} (total rows: {len(combined_df)})")
-    else:
-        features_df.to_csv(filepath, index=False)
-        logger.info(f"✅ Saved features to {filepath}")
 
+        existing_df = pd.read_csv(
+            filepath,
+            parse_dates=['timestamp']
+        )
+
+        # Normalize existing timestamps too
+        existing_df['timestamp'] = pd.to_datetime(
+            existing_df['timestamp'],
+            utc=True
+        )
+
+        combined_df = pd.concat(
+            [existing_df, features_df],
+            ignore_index=True
+        )
+
+        # Remove duplicates
+        combined_df = combined_df.drop_duplicates(
+            subset=['timestamp'],
+            keep='last'
+        )
+
+        # Sort safely
+        combined_df = combined_df.sort_values('timestamp')
+
+        combined_df.to_csv(filepath, index=False)
+
+        logger.info(
+            f"✅ Appended features to {filepath} "
+            f"(total rows: {len(combined_df)})"
+        )
+
+    else:
+
+        features_df.to_csv(filepath, index=False)
+
+        logger.info(f"✅ Saved features to {filepath}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main Pipeline
@@ -202,7 +233,7 @@ def run(use_hopsworks: bool = True, save_local: bool = True) -> bool:
     logger.info("=" * 60)
     logger.info("FEATURE PIPELINE STARTED")
     logger.info(f"City: {CITY_CONFIG['name']}, {CITY_CONFIG['country']}")
-    logger.info(f"Timestamp: {datetime.utcnow().isoformat()}")
+    logger.info(f"Timestamp: {pd.Timestamp.utcnow().isoformat()}")
     logger.info("=" * 60)
     
     # ── Step 1: Fetch raw data ────────────────────────────────────────────────
