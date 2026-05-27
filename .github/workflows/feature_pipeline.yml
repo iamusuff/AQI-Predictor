@@ -42,6 +42,10 @@ jobs:
           echo "CITY_LAT=$CITY_LAT" >> .env
           echo "CITY_LON=$CITY_LON" >> .env
       
+      - name: Add Hopsworks DNS to hosts
+        run: |
+          echo "54.220.231.18 c.app.hopsworks.ai" | sudo tee -a /etc/hosts
+
       - name: Validate configuration
         run: python main.py --check-config
       
