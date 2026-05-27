@@ -31,7 +31,7 @@ jobs:
           AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
-          HOPSWORKS_PROJECT_NAME: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
+          HOPSWORKS_PROJECT: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
           CITY: ${{ secrets.CITY || 'karachi' }}
           CITY_LAT: ${{ secrets.CITY_LAT || '24.8607' }}
           CITY_LON: ${{ secrets.CITY_LON || '67.0011' }}
@@ -39,14 +39,10 @@ jobs:
           echo "AQICN_API_KEY=$AQICN_API_KEY" >> .env
           echo "OPENWEATHER_API_KEY=$OPENWEATHER_API_KEY" >> .env
           echo "HOPSWORKS_API_KEY=$HOPSWORKS_API_KEY" >> .env
-          echo "HOPSWORKS_PROJECT_NAME=$HOPSWORKS_PROJECT_NAME" >> .env
+          echo "HOPSWORKS_PROJECT=$HOPSWORKS_PROJECT" >> .env
           echo "CITY=$CITY" >> .env
           echo "CITY_LAT=$CITY_LAT" >> .env
           echo "CITY_LON=$CITY_LON" >> .env
-      
-      - name: Add Hopsworks DNS to hosts
-        run: |
-          echo "54.220.231.18 c.app.hopsworks.ai" | sudo tee -a /etc/hosts
 
       - name: Validate configuration
         run: python main.py --check-config
