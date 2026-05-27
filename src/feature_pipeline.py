@@ -113,47 +113,41 @@ def get_or_create_feature_group(feature_store, sample_df=None):
         return None
 
 
-def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store):
-    """
-    Insert features into Hopsworks Feature Store.
-    
-    Args:
-        features_df: DataFrame with features
-        feature_store: Hopsworks feature store object
-    
-    Returns:
-        True if successful, False otherwise
-    """
+def insert_features_to_hopsworks(features_df, feature_store):
+
     try:
-        feature_group = get_or_create_feature_group(
-            feature_store,
-            features_df
-        )
+
+        logger.info("Getting feature group...")
+
+        feature_group = get_or_create_feature_group(feature_store)
+
+        logger.info(f"feature_group type: {type(feature_group)}")
+        logger.info(f"feature_group value: {feature_group}")
 
         if feature_group is None:
-            logger.error("❌ Feature group creation failed")
+            logger.error("❌ feature_group is None")
             return False
 
-        features_df["timestamp"] = pd.to_datetime(features_df["timestamp"])
-
-        # Convert object columns to string
-        for col in features_df.select_dtypes(include=["object"]).columns:
-            if col != "timestamp":
-                features_df[col] = features_df[col].astype(str)
-
-        logger.info(features_df.dtypes)
-        logger.info(features_df.head())
+        logger.info("Starting insert...")
 
         feature_group.insert(
             features_df,
             write_options={"wait_for_job": True}
         )
-                
-        logger.info(f"✅ Inserted {len(features_df)} rows into feature group")
+
+        logger.info(
+            f"✅ Inserted {len(features_df)} rows into feature group"
+        )
+
         return True
-        
+
     except Exception as e:
-        logger.error(f"❌ Failed to insert features to Hopsworks: {e}")
+
+        logger.error(
+            f"❌ INSERT FAILED: {str(e)}",
+            exc_info=True
+        )
+
         return False
 
 
