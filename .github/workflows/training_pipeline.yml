@@ -65,7 +65,7 @@ jobs:
           path: models/model_comparison.csv
           retention-days: 30
       
-      - name: Commit model metadata (optional — binary models stored as artifacts)
+      - name: Commit model metadata (safe push)
         if: github.event_name == 'schedule'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -73,13 +73,16 @@ jobs:
 
           git add models/*_metadata.json models/model_comparison.csv
 
-          # commit only if changes exist
-          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          # nothing to commit? exit clean
+          git diff --cached --quiet && echo "No changes" && exit 0
 
           git commit -m "Update model metadata & comparison [skip ci]"
 
-          # safe sync before push
+          # HARD SYNC FIX (important)
           git fetch origin main
-          git rebase origin main || echo "Rebase conflict ignored"
+          git reset --soft origin/main
+
+          # re-apply commit on top cleanly
+          git commit -m "Update model metadata & comparison [skip ci]"
 
           git push origin main
