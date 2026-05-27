@@ -65,24 +65,24 @@ jobs:
           path: models/model_comparison.csv
           retention-days: 30
       
-      - name: Commit model metadata (safe push)
-        if: github.event_name == 'schedule'
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+      # - name: Commit model metadata (safe push)
+      #   if: github.event_name == 'schedule'
+      #   run: |
+      #     git config --local user.email "github-actions[bot]@users.noreply.github.com"
+      #     git config --local user.name "github-actions[bot]"
 
-          git add models/*_metadata.json models/model_comparison.csv
+      #     git add models/*_metadata.json models/model_comparison.csv
 
-          # nothing to commit? exit clean
-          git diff --cached --quiet && echo "No changes" && exit 0
+      #     # nothing to commit? exit clean
+      #     git diff --cached --quiet && echo "No changes" && exit 0
 
-          git commit -m "Update model metadata & comparison [skip ci]"
+      #     git commit -m "Update model metadata & comparison [skip ci]"
 
-          # HARD SYNC FIX (important)
-          git fetch origin main
-          git reset --soft origin/main
+      #     # HARD SYNC FIX (important)
+      #     git fetch origin main
+      #     git reset --soft origin/main
 
-          # re-apply commit on top cleanly
-          git commit -m "Update model metadata & comparison [skip ci]"
+      #     # re-apply commit on top cleanly
+      #     git commit -m "Update model metadata & comparison [skip ci]"
 
-          git push origin main
+      #     git push origin main
