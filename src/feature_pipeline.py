@@ -68,40 +68,49 @@ def connect_to_hopsworks():
         return None, None
 
 
-def get_or_create_feature_group(feature_store):
+def get_or_create_feature_group(feature_store, sample_df=None):
     """
     Get existing feature group or create a new one.
-    
-    Args:
-        feature_store: Hopsworks feature store object
-    
-    Returns:
-        Feature group object
     """
+
     try:
-        # Try to get existing feature group
         feature_group = feature_store.get_feature_group(
             name=FEATURE_GROUP_NAME,
             version=FEATURE_GROUP_VERSION
         )
-        logger.info(f"✅ Using existing feature group: {FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}")
-        
-    except Exception:
-        # Create new feature group
-        logger.info(f"Creating new feature group: {FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}")
-        
-        # Define feature group schema
+
+        logger.info(
+            f"✅ Using existing feature group: "
+            f"{FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}"
+        )
+
+        return feature_group
+
+    except Exception as e:
+        logger.warning(f"Feature group not found: {e}")
+
+    try:
+        logger.info(
+            f"Creating new feature group: "
+            f"{FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}"
+        )
+
         feature_group = feature_store.create_feature_group(
             name=FEATURE_GROUP_NAME,
             version=FEATURE_GROUP_VERSION,
-            description="AQI prediction features with pollutants, weather, and time-based features",
             primary_key=["timestamp"],
             event_time="timestamp",
-            online_enabled=True,  # Enable online feature serving
+            description="AQI prediction features",
+            online_enabled=True,
         )
-        logger.info("✅ Feature group created successfully")
-    
-    return feature_group
+
+        logger.info("✅ Feature group object created")
+
+        return feature_group
+
+    except Exception as e:
+        logger.error(f"❌ Failed creating feature group: {e}")
+        return None
 
 
 def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store):
@@ -116,11 +125,30 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store):
         True if successful, False otherwise
     """
     try:
-        feature_group = get_or_create_feature_group(feature_store)
-        
-        # Insert features
-        feature_group.insert(features_df, write_options={"wait_for_job": True})
-        
+        feature_group = get_or_create_feature_group(
+            feature_store,
+            features_df
+        )
+
+        if feature_group is None:
+            logger.error("❌ Feature group creation failed")
+            return False
+
+        features_df["timestamp"] = pd.to_datetime(features_df["timestamp"])
+
+        # Convert object columns to string
+        for col in features_df.select_dtypes(include=["object"]).columns:
+            if col != "timestamp":
+                features_df[col] = features_df[col].astype(str)
+
+        logger.info(features_df.dtypes)
+        logger.info(features_df.head())
+
+        feature_group.insert(
+            features_df,
+            write_options={"wait_for_job": True}
+        )
+                
         logger.info(f"✅ Inserted {len(features_df)} rows into feature group")
         return True
         
