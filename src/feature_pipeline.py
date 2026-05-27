@@ -50,7 +50,7 @@ def connect_to_hopsworks():
         
         logger.info("Connecting to Hopsworks...")
         project = hopsworks.login(
-            host="c.hopsworks.ai",
+            host="eu-west.cloud.hopsworks.ai",
             api_key_value=HOPSWORKS_API_KEY,
             project=HOPSWORKS_PROJECT_NAME
         )

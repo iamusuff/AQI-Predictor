@@ -51,10 +51,10 @@ jobs:
           echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
           echo "nameserver 1.1.1.1" | sudo tee -a /etc/resolv.conf
 
-          nslookup c.app.hopsworks.ai || true
-          ping -c 2 c.app.hopsworks.ai || true
+          nslookup eu-west.cloud.hopsworks.ai || true
+          ping -c 2 eu-west.cloud.hopsworks.ai || true
 
-          python -c "import socket; print(socket.gethostbyname('c.app.hopsworks.ai'))"
+          python -c "import socket; print(socket.gethostbyname('eu-west.cloud.hopsworks.ai'))"
 
       - name: Validate configuration
         run: python main.py --check-config
