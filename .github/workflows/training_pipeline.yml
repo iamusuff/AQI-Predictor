@@ -65,12 +65,12 @@ jobs:
           path: models/model_comparison.csv
           retention-days: 30
       
-      - name: Commit and push models (optional)
+      - name: Commit model metadata (optional — binary models stored as artifacts)
         if: github.event_name == 'schedule'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add models/
-          git diff --staged --quiet || git commit -m "Update trained models [skip ci]"
+          git add models/*_metadata.json models/model_comparison.csv
+          git diff --staged --quiet || git commit -m "Update model metadata & comparison [skip ci]"
           git pull --rebase origin main
           git push origin main
