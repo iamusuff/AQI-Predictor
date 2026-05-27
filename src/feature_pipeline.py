@@ -167,9 +167,6 @@ def get_or_create_feature_group(feature_store, sample_df=None):
 
 
 def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bool:
-    """
-    Insert feature DataFrame into Hopsworks feature group.
-    """
     try:
         logger.info("Resolving feature group...")
         feature_group = get_or_create_feature_group(feature_store, sample_df=features_df)
@@ -178,29 +175,51 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
             logger.error("❌ feature_group is None — aborting insert.")
             return False
 
-        # Validate the object is actually a feature group
         if not hasattr(feature_group, 'insert'):
-            logger.error(
-                f"❌ feature_group has no 'insert' method. "
-                f"Got type: {type(feature_group)}. Value: {feature_group}"
-            )
+            logger.error(f"❌ feature_group has no insert method. Type: {type(feature_group)}")
             return False
 
         logger.info(f"✅ Feature group confirmed: {feature_group.name} v{feature_group.version}")
 
-        # ── Sanitize timestamp: Hopsworks needs naive UTC ─────────────────────
         features_df = features_df.copy()
+
+        # ── Enforce exact types so schema never mismatches ────────────────────
+        # These must be int (bigint in Hopsworks)
+        int_columns = [
+            'aqi', 'pm25', 'pm10',
+            'humidity', 'pressure', 'visibility',
+            'hour', 'day_of_week', 'month', 'season',
+            'is_weekend', 'is_peak_hour'
+        ]
+
+        # These must be float (double in Hopsworks)
+        float_columns = [
+            'o3', 'no2', 'so2', 'co',
+            'temperature', 'wind_speed',
+            'dew_point', 'wind_gust',
+            'temp_humidity_index', 'aqi_rolling_mean',
+            'aqi_rolling_std', 'wind_chill'
+        ]
+
+        for col in int_columns:
+            if col in features_df.columns:
+                features_df[col] = features_df[col].astype('int64')
+
+        for col in float_columns:
+            if col in features_df.columns:
+                features_df[col] = features_df[col].astype('float64')
+
+        # ── Timestamp must be naive UTC ───────────────────────────────────────
         features_df["timestamp"] = pd.to_datetime(
             features_df["timestamp"], utc=True
         ).dt.tz_localize(None)
 
+        logger.info(f"Dtypes after cast:\n{features_df.dtypes}")
         logger.info(f"Inserting {len(features_df)} row(s)...")
-        logger.info(f"Columns: {list(features_df.columns)}")
-        logger.info(f"Dtypes:\n{features_df.dtypes}")
 
         feature_group.insert(
             features_df,
-            write_options={"wait_for_job": False}
+            write_options={"wait_for_job": True}
         )
 
         logger.info(f"✅ Inserted {len(features_df)} row(s) into '{FEATURE_GROUP_NAME}'")
