@@ -109,6 +109,38 @@ def debug_feature_store(feature_store):
     except Exception as e:
         logger.info(f"get_or_create raised: {type(e).__name__}: {e}")
 
+def normalize_feature_dtypes(features_df):
+
+    dtype_map = {
+        "aqi": "float64",
+        "pm25": "float64",
+        "pm10": "float64",
+        "o3": "float64",
+        "no2": "float64",
+        "so2": "float64",
+        "co": "float64",
+        "temperature": "float64",
+        "humidity": "float64",
+        "wind_speed": "float64",
+        "hour": "int32",
+        "day_of_week": "int32",
+        "month": "int32",
+    }
+
+    for col, dtype in dtype_map.items():
+
+        if col in features_df.columns:
+
+            try:
+                features_df[col] = features_df[col].astype(dtype)
+
+            except Exception as e:
+                logger.warning(
+                    f"Could not cast {col} to {dtype}: {e}"
+                )
+
+    return features_df
+
 def get_or_create_feature_group(feature_store, sample_df=None):
     """
     Get existing feature group or create a new one.
@@ -197,6 +229,8 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
         logger.info(f"Inserting {len(features_df)} row(s)...")
         logger.info(f"Columns: {list(features_df.columns)}")
         logger.info(f"Dtypes:\n{features_df.dtypes}")
+
+        features_df = normalize_feature_dtypes(features_df)
 
         feature_group.insert(
             features_df,
