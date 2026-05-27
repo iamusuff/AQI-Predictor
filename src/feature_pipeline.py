@@ -68,12 +68,19 @@ def connect_to_hopsworks():
         return None, None
 
 
-def get_or_create_feature_group(feature_store, sample_df=None):
+def get_or_create_feature_group(feature_store, sample_df):
     """
-    Get existing feature group or create a new one.
+    Get existing feature group or create new feature group.
     """
 
     try:
+
+        logger.info(
+            f"Loading feature group: "
+            f"{FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}"
+        )
+
+        # Try existing FG first
         feature_group = feature_store.get_feature_group(
             name=FEATURE_GROUP_NAME,
             version=FEATURE_GROUP_VERSION
@@ -86,66 +93,140 @@ def get_or_create_feature_group(feature_store, sample_df=None):
 
         return feature_group
 
-    except Exception as e:
-        logger.warning(f"Feature group not found: {e}")
+    except Exception:
+
+        logger.warning(
+            "Feature group does not exist. Creating new one..."
+        )
 
     try:
-        logger.info(
-            f"Creating new feature group: "
-            f"{FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}"
+
+        # ─────────────────────────────────────────────
+        # Prepare dataframe schema correctly
+        # ─────────────────────────────────────────────
+
+        sample_df = sample_df.copy()
+
+        # Make timestamp timezone-naive
+        sample_df["timestamp"] = (
+            pd.to_datetime(sample_df["timestamp"])
+            .dt.tz_localize(None)
         )
+
+        # Add city column for composite PK
+        if "city" not in sample_df.columns:
+            sample_df["city"] = CITY_CONFIG["name"]
+
+        logger.info("Creating feature group with schema:")
+        logger.info(sample_df.dtypes)
+
+        # ─────────────────────────────────────────────
+        # Create Feature Group
+        # ─────────────────────────────────────────────
 
         feature_group = feature_store.create_feature_group(
             name=FEATURE_GROUP_NAME,
             version=FEATURE_GROUP_VERSION,
-            primary_key=["timestamp"],
+            primary_key=["timestamp", "city"],
             event_time="timestamp",
             description="AQI prediction features",
             online_enabled=True,
         )
 
-        logger.info("✅ Feature group object created")
+        logger.info("✅ Feature group created successfully")
 
         return feature_group
 
-    except Exception as e:
-        logger.error(f"❌ Failed creating feature group: {e}")
+    except Exception:
+
+        logger.exception(
+            "❌ Failed to create feature group"
+        )
+
         return None
 
 
 def insert_features_to_hopsworks(features_df, feature_store):
+    """
+    Insert features into Hopsworks Feature Store.
+    """
 
     try:
 
-        logger.info("Getting feature group...")
+        logger.info("Preparing feature dataframe...")
 
-        feature_group = get_or_create_feature_group(feature_store)
+        # Work on copy
+        features_df = features_df.copy()
 
-        logger.info(f"feature_group type: {type(feature_group)}")
-        logger.info(f"feature_group value: {feature_group}")
+        # ─────────────────────────────────────────────
+        # Fix timestamp for Hopsworks compatibility
+        # ─────────────────────────────────────────────
+
+        features_df["timestamp"] = (
+            pd.to_datetime(features_df["timestamp"])
+            .dt.tz_localize(None)
+        )
+
+        # Add city column
+        if "city" not in features_df.columns:
+            features_df["city"] = CITY_CONFIG["name"]
+
+        # Remove duplicate columns if any
+        features_df = features_df.loc[
+            :,
+            ~features_df.columns.duplicated()
+        ]
+
+        logger.info("Final dataframe schema:")
+        logger.info(features_df.dtypes)
+
+        logger.info("Sample row:")
+        logger.info(features_df.iloc[0].to_dict())
+
+        # ─────────────────────────────────────────────
+        # Get/Create Feature Group
+        # ─────────────────────────────────────────────
+
+        feature_group = get_or_create_feature_group(
+            feature_store,
+            features_df
+        )
 
         if feature_group is None:
-            logger.error("❌ feature_group is None")
+
+            logger.error(
+                "❌ Failed to initialize feature group"
+            )
+
             return False
 
-        logger.info("Starting insert...")
+        logger.info(
+            f"Inserting into FG: "
+            f"{FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}"
+        )
+
+        # ─────────────────────────────────────────────
+        # Insert into Hopsworks
+        # ─────────────────────────────────────────────
 
         feature_group.insert(
             features_df,
-            write_options={"wait_for_job": True}
+            write_options={
+                "wait_for_job": True
+            }
         )
 
         logger.info(
-            f"✅ Inserted {len(features_df)} rows into feature group"
+            f"✅ Successfully inserted "
+            f"{len(features_df)} row(s)"
         )
 
         return True
 
-    except Exception as e:
+    except Exception:
 
-        logger.error(
-            f"❌ INSERT FAILED: {str(e)}",
-            exc_info=True
+        logger.exception(
+            "❌ Failed inserting features into Hopsworks"
         )
 
         return False
