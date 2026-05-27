@@ -101,7 +101,7 @@ def debug_feature_store(feature_store):
             version=FEATURE_GROUP_VERSION,
             primary_key=["timestamp"],
             event_time="timestamp",
-            online_enabled=True,
+            online_enabled=False,
         )
         logger.info(f"get_or_create result type : {type(fg2)}")
         logger.info(f"get_or_create result value: {fg2}")
@@ -147,8 +147,8 @@ def get_or_create_feature_group(feature_store, sample_df=None):
             version=FEATURE_GROUP_VERSION,
             primary_key=["timestamp"],
             event_time="timestamp",
-            description="AQI prediction features for Pearls city",
-            online_enabled=True,
+            description="AQI prediction features for Karachi",
+            online_enabled=False,
         )
 
         if feature_group is None:
@@ -200,7 +200,7 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
 
         feature_group.insert(
             features_df,
-            write_options={"wait_for_job": True}
+            write_options={"wait_for_job": False}
         )
 
         logger.info(f"✅ Inserted {len(features_df)} row(s) into '{FEATURE_GROUP_NAME}'")
