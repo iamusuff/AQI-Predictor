@@ -219,7 +219,7 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
 
         feature_group.insert(
             features_df,
-            write_options={"wait_for_job": True}
+            write_options={"wait_for_job": False}
         )
 
         logger.info(f"✅ Inserted {len(features_df)} row(s) into '{FEATURE_GROUP_NAME}'")
