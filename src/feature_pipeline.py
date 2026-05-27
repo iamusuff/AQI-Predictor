@@ -57,6 +57,8 @@ def connect_to_hopsworks():
         
         feature_store = project.get_feature_store()
         logger.info(f"✅ Connected to Hopsworks project: {HOPSWORKS_PROJECT_NAME}")
+        if feature_store:
+            debug_feature_store(feature_store)
         # feature_groups = feature_store.get_feature_groups()
         # for fg in feature_groups:
 
@@ -77,39 +79,66 @@ def connect_to_hopsworks():
         logger.error(f"❌ Failed to connect to Hopsworks: {e}")
         return None, None
 
+def debug_feature_store(feature_store):
+    """Paste this call right after connect_to_hopsworks() to diagnose."""
+    logger.info(f"Feature store type: {type(feature_store)}")
+    logger.info(f"Feature store value: {feature_store}")
+
+    try:
+        fg = feature_store.get_feature_group(
+            name=FEATURE_GROUP_NAME,
+            version=FEATURE_GROUP_VERSION
+        )
+        logger.info(f"get_feature_group result type : {type(fg)}")
+        logger.info(f"get_feature_group result value: {fg}")
+        logger.info(f"Has insert method: {hasattr(fg, 'insert')}")
+    except Exception as e:
+        logger.info(f"get_feature_group raised: {type(e).__name__}: {e}")
+
+    try:
+        fg2 = feature_store.get_or_create_feature_group(
+            name=FEATURE_GROUP_NAME,
+            version=FEATURE_GROUP_VERSION,
+            primary_key=["timestamp"],
+            event_time="timestamp",
+            online_enabled=True,
+        )
+        logger.info(f"get_or_create result type : {type(fg2)}")
+        logger.info(f"get_or_create result value: {fg2}")
+        logger.info(f"Has insert method: {hasattr(fg2, 'insert')}")
+    except Exception as e:
+        logger.info(f"get_or_create raised: {type(e).__name__}: {e}")
 
 def get_or_create_feature_group(feature_store, sample_df=None):
     """
     Get existing feature group or create a new one.
-    Requires sample_df when creating to infer the schema.
     """
+    feature_group = None
 
     # ── Try fetching existing group first ────────────────────────────────────
     try:
-        feature_group = feature_store.get_feature_group(
+        fg = feature_store.get_feature_group(
             name=FEATURE_GROUP_NAME,
             version=FEATURE_GROUP_VERSION
         )
-        logger.info(
-            f"✅ Using existing feature group: "
-            f"{FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}"
-        )
-        return feature_group
+
+        # Some Hopsworks versions return None instead of raising when not found
+        if fg is not None:
+            logger.info(
+                f"✅ Found existing feature group: "
+                f"{FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}"
+            )
+            return fg
+        else:
+            logger.warning("⚠️  get_feature_group returned None — will attempt creation.")
 
     except Exception as e:
-        logger.warning(f"⚠️  Feature group not found, will create. Reason: {e}")
+        logger.warning(f"⚠️  get_feature_group raised exception — will attempt creation. Reason: {e}")
 
-    # ── Create new feature group ──────────────────────────────────────────────
-    if sample_df is None:
-        logger.error(
-            "❌ Cannot create feature group: sample_df is required "
-            "to infer schema but was not provided."
-        )
-        return None
-
+    # ── Create / upsert feature group ─────────────────────────────────────────
     try:
         logger.info(
-            f"Creating new feature group: "
+            f"Creating feature group: "
             f"{FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}"
         )
 
@@ -122,7 +151,14 @@ def get_or_create_feature_group(feature_store, sample_df=None):
             online_enabled=True,
         )
 
-        logger.info(f"✅ Feature group created: {FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}")
+        if feature_group is None:
+            logger.error("❌ get_or_create_feature_group returned None.")
+            return None
+
+        logger.info(
+            f"✅ Feature group ready: "
+            f"{feature_group.name} v{feature_group.version}"
+        )
         return feature_group
 
     except Exception as e:
@@ -133,24 +169,30 @@ def get_or_create_feature_group(feature_store, sample_df=None):
 def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bool:
     """
     Insert feature DataFrame into Hopsworks feature group.
-    Passes features_df to get_or_create so schema can be inferred on first run.
     """
-
     try:
-        logger.info("Getting or creating feature group...")
+        logger.info("Resolving feature group...")
         feature_group = get_or_create_feature_group(feature_store, sample_df=features_df)
 
         if feature_group is None:
-            logger.error("❌ feature_group is None — cannot insert.")
+            logger.error("❌ feature_group is None — aborting insert.")
             return False
 
-        logger.info(f"Feature group resolved: {feature_group.name} v{feature_group.version}")
+        # Validate the object is actually a feature group
+        if not hasattr(feature_group, 'insert'):
+            logger.error(
+                f"❌ feature_group has no 'insert' method. "
+                f"Got type: {type(feature_group)}. Value: {feature_group}"
+            )
+            return False
 
-        # ── Ensure timestamp is Python datetime (Hopsworks requirement) ───────
+        logger.info(f"✅ Feature group confirmed: {feature_group.name} v{feature_group.version}")
+
+        # ── Sanitize timestamp: Hopsworks needs naive UTC ─────────────────────
         features_df = features_df.copy()
         features_df["timestamp"] = pd.to_datetime(
             features_df["timestamp"], utc=True
-        ).dt.tz_localize(None)  # Strip tz — Hopsworks stores as UTC internally
+        ).dt.tz_localize(None)
 
         logger.info(f"Inserting {len(features_df)} row(s)...")
         logger.info(f"Columns: {list(features_df.columns)}")
@@ -161,7 +203,7 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
             write_options={"wait_for_job": True}
         )
 
-        logger.info(f"✅ Successfully inserted {len(features_df)} row(s) into '{FEATURE_GROUP_NAME}'")
+        logger.info(f"✅ Inserted {len(features_df)} row(s) into '{FEATURE_GROUP_NAME}'")
         return True
 
     except Exception as e:
