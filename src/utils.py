@@ -436,6 +436,122 @@ def validate_feature_data(features: Dict) -> Tuple[bool, str]:
     return True, ""
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# OpenMeteo Historical Data (Free, No API Key Required)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def fetch_openmeteo_weather(lat: float, lon: float, start_date: str, end_date: str):
+    """
+    Fetch historical hourly weather data from OpenMeteo Archive API.
+    Free tier, no API key required. 10,000 requests/day limit.
+
+    Docs: https://open-meteo.com/en/docs/historical-weather-api
+
+    Args:
+        lat: Latitude
+        lon: Longitude
+        start_date: Start date YYYY-MM-DD
+        end_date: End date YYYY-MM-DD
+
+    Returns:
+        DataFrame with columns: timestamp, temperature, humidity, wind_speed,
+        pressure, visibility, clouds. Returns None on failure.
+    """
+    url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start_date,
+        "end_date": end_date,
+        "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m,pressure_msl,visibility,cloud_cover",
+        "timezone": "auto",
+    }
+
+    try:
+        logger.info(f"Fetching OpenMeteo weather: {start_date} to {end_date}")
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        hourly = data["hourly"]
+        df = pd.DataFrame({
+            "timestamp": pd.to_datetime(hourly["time"]),
+            "temperature": hourly["temperature_2m"],
+            "humidity": hourly["relative_humidity_2m"],
+            "wind_speed": hourly["wind_speed_10m"],
+            "pressure": hourly["pressure_msl"],
+            "visibility": hourly.get("visibility", [10000] * len(hourly["time"])),
+            "clouds": hourly.get("cloud_cover", [0] * len(hourly["time"])),
+        })
+
+        # Drop rows where all weather values are null
+        weather_cols = ["temperature", "humidity", "wind_speed", "pressure"]
+        df = df.dropna(subset=weather_cols, how="all")
+
+        logger.info(f"✅ OpenMeteo weather: {len(df)} hourly records")
+        return df
+
+    except Exception as e:
+        logger.error(f"Failed to fetch OpenMeteo weather: {e}")
+        return None
+
+
+def fetch_openmeteo_aqi(lat: float, lon: float, start_date: str, end_date: str):
+    """
+    Fetch historical hourly air quality data from OpenMeteo Air Quality API.
+    Free tier, no API key required.
+
+    Docs: https://open-meteo.com/en/docs/air-quality-api
+
+    Args:
+        lat: Latitude
+        lon: Longitude
+        start_date: Start date YYYY-MM-DD
+        end_date: End date YYYY-MM-DD
+
+    Returns:
+        DataFrame with columns: timestamp, pm25, pm10, o3, no2, so2, co.
+        Returns None on failure.
+    """
+    url = "https://air-quality-api.open-meteo.com/v1/air-quality"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start_date,
+        "end_date": end_date,
+        "hourly": "pm2_5,pm10,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide",
+        "timezone": "auto",
+    }
+
+    try:
+        logger.info(f"Fetching OpenMeteo AQI: {start_date} to {end_date}")
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        hourly = data["hourly"]
+        df = pd.DataFrame({
+            "timestamp": pd.to_datetime(hourly["time"]),
+            "pm25": hourly["pm2_5"],
+            "pm10": hourly["pm10"],
+            "o3": hourly["ozone"],
+            "no2": hourly["nitrogen_dioxide"],
+            "so2": hourly["sulphur_dioxide"],
+            "co": hourly["carbon_monoxide"],
+        })
+
+        # Drop rows where all pollutants are null
+        pollutant_cols = ["pm25", "pm10", "o3", "no2", "so2", "co"]
+        df = df.dropna(subset=pollutant_cols, how="all")
+
+        logger.info(f"✅ OpenMeteo AQI: {len(df)} hourly records")
+        return df
+
+    except Exception as e:
+        logger.error(f"Failed to fetch OpenMeteo AQI: {e}")
+        return None
+
+
 if __name__ == "__main__":
     # Test API functions
     print("=== Testing API Functions ===\n")
@@ -465,3 +581,25 @@ if __name__ == "__main__":
             print("   ✅ Features are valid")
         else:
             print(f"   ❌ Validation error: {error}")
+    
+    print("\n5. Testing OpenMeteo historical APIs (free)...")
+    from datetime import timedelta
+    end = datetime.utcnow()
+    start = end - timedelta(days=3)
+    om_weather = fetch_openmeteo_weather(
+        CITY_CONFIG['lat'], CITY_CONFIG['lon'],
+        start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
+    )
+    if om_weather is not None:
+        print(f"   ✅ OpenMeteo weather: {len(om_weather)} rows")
+    else:
+        print("   ❌ OpenMeteo weather failed")
+    
+    om_aqi = fetch_openmeteo_aqi(
+        CITY_CONFIG['lat'], CITY_CONFIG['lon'],
+        start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
+    )
+    if om_aqi is not None:
+        print(f"   ✅ OpenMeteo AQI: {len(om_aqi)} rows")
+    else:
+        print("   ❌ OpenMeteo AQI failed")

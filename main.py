@@ -38,6 +38,17 @@ def main():
         default=None,
         help="Override the city from .env (e.g. --city lahore)",
     )
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=90,
+        help="Days to backfill (used with --pipeline backfill)",
+    )
+    parser.add_argument(
+        "--no-openmeteo",
+        action="store_true",
+        help="Skip OpenMeteo, use synthetic data only (used with --pipeline backfill)",
+    )
 
     args = parser.parse_args()
 
@@ -63,9 +74,9 @@ def main():
         run_feature()
 
     elif args.pipeline == "backfill":
-        print("Running historical backfill...")
+        print(f"Running historical backfill ({args.days} days, OpenMeteo={'on' if not args.no_openmeteo else 'off'})...")
         from backfill import run as run_backfill
-        run_backfill()
+        run_backfill(days=args.days, openmeteo=not args.no_openmeteo)
 
     elif args.pipeline == "train":
         print("Running training pipeline...")

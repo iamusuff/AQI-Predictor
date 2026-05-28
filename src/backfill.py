@@ -1,6 +1,7 @@
 """
 Pearls AQI Predictor — Historical Data Backfill
-Fetches historical air quality and weather data to generate training dataset.
+Fetches historical air quality and weather data from OpenMeteo (free, no key).
+Falls back to synthetic data if the API is unavailable.
 
 This script backfills 90-180 days of historical data for model training.
 """
@@ -13,7 +14,6 @@ import logging
 import time
 import sys
 import os
-from tqdm import tqdm
 
 from config import (
     FEATURE_GROUP_NAME,
@@ -21,11 +21,13 @@ from config import (
     CITY_CONFIG,
     HOPSWORKS_API_KEY,
     HOPSWORKS_PROJECT_NAME,
-    OPENWEATHER_API_KEY,
 )
 from utils import (
+    fetch_openmeteo_weather,
+    fetch_openmeteo_aqi,
     compute_time_features,
     compute_derived_features,
+    compute_aqi_target,
     validate_feature_data,
 )
 
@@ -38,80 +40,90 @@ logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Historical Weather Data (OpenWeather)
+# OpenMeteo Backfill (Primary)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def fetch_historical_weather(lat: float, lon: float, timestamp: int) -> Optional[Dict]:
+def backfill_via_openmeteo(lat: float, lon: float, start_date: str, end_date: str):
     """
-    Fetch historical weather data from OpenWeather One Call API 3.0 (timemachine).
-    
-    Note: This requires a paid subscription to OpenWeather One Call API 3.0.
-    Free tier does not include historical data.
-    
+    Fetch historical data from OpenMeteo APIs (free, no API key required).
+
+    Makes 2 batch calls total (weather + AQI) instead of per-hour looping.
+
     Args:
         lat: Latitude
         lon: Longitude
-        timestamp: Unix timestamp (seconds since epoch)
-    
+        start_date: Start date YYYY-MM-DD
+        end_date: End date YYYY-MM-DD
+
     Returns:
-        Dictionary with historical weather data, or None if request fails
+        DataFrame with hourly features, or None if both APIs fail
     """
-    import requests
-    
-    # OpenWeather One Call API 3.0 - Timemachine endpoint
-    # Note: This is a PAID feature. Free tier users will get 401 error.
-    url = "https://api.openweathermap.org/data/3.0/onecall/timemachine"
-    params = {
-        'lat': lat,
-        'lon': lon,
-        'dt': timestamp,
-        'appid': OPENWEATHER_API_KEY,
-        'units': 'metric'
-    }
-    
-    try:
-        response = requests.get(url, params=params, timeout=10)
-        
-        # Check if we have access to historical API
-        if response.status_code == 401:
-            logger.warning("⚠️  OpenWeather historical API requires paid subscription")
-            return None
-        
-        response.raise_for_status()
-        data = response.json()
-        
-        # Extract current weather from historical data
-        current = data.get('data', [{}])[0]
-        
-        result = {
-            'temperature': current.get('temp', None),
-            'humidity': current.get('humidity', None),
-            'wind_speed': current.get('wind_speed', None),
-            'pressure': current.get('pressure', None),
-            'visibility': current.get('visibility', 10000),  # Default 10km
-            'clouds': current.get('clouds', None),
-            'weather_main': current.get('weather', [{}])[0].get('main', None),
-            'weather_description': current.get('weather', [{}])[0].get('description', None),
-        }
-        
-        return result
-        
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to fetch historical weather: {e}")
+    logger.info("─" * 70)
+    logger.info("Backfill via OpenMeteo (free APIs, no key required)")
+    logger.info("─" * 70)
+
+    # Step 1: Fetch weather data
+    logger.info("\n[1/3] Fetching historical weather from OpenMeteo...")
+    weather_df = fetch_openmeteo_weather(lat, lon, start_date, end_date)
+    if weather_df is None or weather_df.empty:
+        logger.error("❌ OpenMeteo weather fetch returned no data")
+        return None
+    logger.info(f"✅ Weather: {len(weather_df)} hourly records")
+
+    # Step 2: Fetch AQI data
+    logger.info("\n[2/3] Fetching historical air quality from OpenMeteo...")
+    aqi_df = fetch_openmeteo_aqi(lat, lon, start_date, end_date)
+    if aqi_df is None or aqi_df.empty:
+        logger.error("❌ OpenMeteo AQI fetch returned no data")
+        return None
+    logger.info(f"✅ AQI: {len(aqi_df)} hourly records")
+
+    # Step 3: Merge weather + AQI on timestamp
+    logger.info("\n[3/3] Merging and computing features...")
+    df = pd.merge(aqi_df, weather_df, on="timestamp", how="inner")
+    logger.info(f"✅ Merged: {len(df)} records")
+
+    if df.empty:
+        logger.error("❌ Merge produced empty DataFrame (no overlapping timestamps)")
         return None
 
+    # Sort by timestamp
+    df = df.sort_values("timestamp").reset_index(drop=True)
 
-def generate_synthetic_weather(base_temp: float, base_humidity: float, 
+    # Compute AQI from raw pollutant concentrations (EPA method)
+    df["aqi"] = df.apply(lambda row: compute_aqi_target(row.to_dict()), axis=1)
+
+    # Compute time features
+    time_data = df["timestamp"].apply(compute_time_features)
+    time_df = pd.DataFrame(time_data.tolist())
+    df = pd.concat([df, time_df], axis=1)
+
+    # Add dominant pollutant placeholder (will be refined later)
+    df["dominentpol"] = "pm25"
+
+    # Fill null weather descriptions (OpenMeteo doesn't provide them)
+    df["weather_main"] = None
+    df["weather_description"] = None
+
+    logger.info(f"✅ Generated {len(df)} rows with {len(df.columns)} features")
+    return df
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Synthetic Data Generation (Fallback)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_synthetic_weather(base_temp: float, base_humidity: float,
                                timestamp: datetime) -> Dict:
     """
     Generate synthetic weather data based on seasonal patterns.
     This is a fallback when historical weather API is not available.
-    
+
     Args:
         base_temp: Base temperature for the city
         base_humidity: Base humidity for the city
         timestamp: Target datetime
-    
+
     Returns:
         Dictionary with synthetic weather data
     """
@@ -125,22 +137,22 @@ def generate_synthetic_weather(base_temp: float, base_humidity: float,
         temp_adj = 5
     else:  # Fall
         temp_adj = -2
-    
+
     # Daily variation (cooler at night, warmer during day)
     hour = timestamp.hour
     if 6 <= hour <= 18:  # Daytime
         hour_adj = 3 * np.sin((hour - 6) * np.pi / 12)
     else:  # Nighttime
         hour_adj = -3
-    
+
     # Add some randomness
     np.random.seed(int(timestamp.timestamp()))
     noise = np.random.normal(0, 2)
-    
+
     temperature = base_temp + temp_adj + hour_adj + noise
     humidity = base_humidity + np.random.normal(0, 5)
     humidity = max(20, min(100, humidity))  # Clamp to valid range
-    
+
     return {
         'temperature': round(temperature, 2),
         'humidity': round(humidity, 0),
@@ -153,72 +165,15 @@ def generate_synthetic_weather(base_temp: float, base_humidity: float,
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Historical AQI Data (Multiple Sources)
-# ─────────────────────────────────────────────────────────────────────────────
-
-def fetch_openaq_historical(lat: float, lon: float, date_from: str, date_to: str) -> Optional[pd.DataFrame]:
-    """
-    Fetch historical air quality data from OpenAQ API.
-    
-    OpenAQ provides free access to historical air quality data from monitoring stations worldwide.
-    
-    Args:
-        lat: Latitude
-        lon: Longitude
-        date_from: Start date (YYYY-MM-DD)
-        date_to: End date (YYYY-MM-DD)
-    
-    Returns:
-        DataFrame with historical AQI data, or None if request fails
-    """
-    import requests
-    
-    # OpenAQ API v2
-    url = "https://api.openaq.org/v2/measurements"
-    
-    # Search for measurements near the coordinates
-    params = {
-        'coordinates': f"{lat},{lon}",
-        'radius': 25000,  # 25km radius
-        'date_from': date_from,
-        'date_to': date_to,
-        'limit': 10000,
-        'order_by': 'datetime',
-    }
-    
-    try:
-        logger.info(f"Fetching OpenAQ data from {date_from} to {date_to}...")
-        response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
-        
-        data = response.json()
-        results = data.get('results', [])
-        
-        if not results:
-            logger.warning(f"No OpenAQ data found for coordinates ({lat}, {lon})")
-            return None
-        
-        # Convert to DataFrame
-        df = pd.DataFrame(results)
-        logger.info(f"✅ Fetched {len(df)} measurements from OpenAQ")
-        
-        return df
-        
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to fetch OpenAQ data: {e}")
-        return None
-
-
 def generate_synthetic_aqi(timestamp: datetime, base_aqi: float = 100) -> Dict:
     """
     Generate synthetic AQI data based on typical patterns.
     This is a fallback when historical AQI data is not available.
-    
+
     Args:
         timestamp: Target datetime
         base_aqi: Base AQI level for the city
-    
+
     Returns:
         Dictionary with synthetic AQI data
     """
@@ -232,7 +187,7 @@ def generate_synthetic_aqi(timestamp: datetime, base_aqi: float = 100) -> Dict:
         seasonal_factor = 0.9
     else:  # Fall
         seasonal_factor = 1.0
-    
+
     # Daily pattern (worse during rush hours)
     hour = timestamp.hour
     if hour in [7, 8, 9, 17, 18, 19]:  # Rush hours
@@ -241,18 +196,18 @@ def generate_synthetic_aqi(timestamp: datetime, base_aqi: float = 100) -> Dict:
         hourly_factor = 0.8
     else:
         hourly_factor = 1.0
-    
+
     # Add randomness
     np.random.seed(int(timestamp.timestamp()))
     noise = np.random.normal(1, 0.15)
-    
+
     aqi = base_aqi * seasonal_factor * hourly_factor * noise
     aqi = max(20, min(300, aqi))  # Clamp to reasonable range
-    
+
     # Generate pollutant concentrations based on AQI
     pm25 = aqi * 0.6 + np.random.normal(0, 5)
     pm10 = pm25 * 1.5 + np.random.normal(0, 10)
-    
+
     return {
         'aqi': round(aqi, 0),
         'pm25': round(max(0, pm25), 1),
@@ -265,25 +220,78 @@ def generate_synthetic_aqi(timestamp: datetime, base_aqi: float = 100) -> Dict:
     }
 
 
+def backfill_via_synthetic(days_back: int, base_aqi: float = 120,
+                            base_temp: float = 28.0, base_humidity: float = 65.0):
+    """
+    Generate synthetic dataset for the specified number of days.
+
+    Args:
+        days_back: Number of days to generate
+        base_aqi: Base AQI level
+        base_temp: Base temperature
+        base_humidity: Base humidity
+
+    Returns:
+        DataFrame with synthetic features
+    """
+    logger.info("─" * 70)
+    logger.info("Backfill via Synthetic Data Generation")
+    logger.info("─" * 70)
+
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=days_back)
+
+    timestamps = []
+    current = start_date
+    while current <= end_date:
+        timestamps.append(current)
+        current += timedelta(hours=1)
+
+    total_hours = len(timestamps)
+    logger.info(f"Generating {total_hours} synthetic hourly records...")
+
+    all_features = []
+    for ts in timestamps:
+        aqi_data = generate_synthetic_aqi(ts, base_aqi)
+        weather_data = generate_synthetic_weather(base_temp, base_humidity, ts)
+        time_features = compute_time_features(ts)
+        features = {
+            'timestamp': ts,
+            **aqi_data,
+            **weather_data,
+            **time_features,
+        }
+        all_features.append(features)
+
+    df = pd.DataFrame(all_features)
+    logger.info(f"✅ Generated {len(df)} synthetic rows")
+    return df
+
+
 # ─────────────────────────────────────────────────────────────────────────────
-# Backfill Pipeline
+# Main Backfill Pipeline
 # ─────────────────────────────────────────────────────────────────────────────
 
 def backfill_historical_data(
     days_back: int = 90,
-    use_synthetic: bool = False,
+    use_openmeteo: bool = True,
     save_local: bool = True,
-    use_hopsworks: bool = False
+    use_hopsworks: bool = False,
 ) -> pd.DataFrame:
     """
     Backfill historical data for training.
-    
+
+    Priority:
+      1. OpenMeteo APIs (free, no key required) — 2 batch calls for all data
+      2. Synthetic data (fallback if OpenMeteo unavailable)
+
     Args:
         days_back: Number of days to backfill (default: 90)
-        use_synthetic: Use synthetic data instead of API calls (default: False)
+        use_openmeteo: Try OpenMeteo first (default: True).
+                       Falls back to synthetic automatically on failure.
         save_local: Save to local CSV (default: True)
         use_hopsworks: Upload to Hopsworks (default: False)
-    
+
     Returns:
         DataFrame with historical features
     """
@@ -291,115 +299,58 @@ def backfill_historical_data(
     logger.info("HISTORICAL DATA BACKFILL STARTED")
     logger.info(f"City: {CITY_CONFIG['name']}, {CITY_CONFIG['country']}")
     logger.info(f"Days to backfill: {days_back}")
-    logger.info(f"Mode: {'Synthetic' if use_synthetic else 'API'}")
     logger.info("=" * 70)
-    
+
     # Calculate date range
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=days_back)
-    
     logger.info(f"\nDate range: {start_date.date()} to {end_date.date()}")
-    
-    # Generate hourly timestamps
-    timestamps = []
-    current = start_date
-    while current <= end_date:
-        timestamps.append(current)
-        current += timedelta(hours=1)
-    
-    total_hours = len(timestamps)
-    logger.info(f"Total hours to process: {total_hours}")
-    
-    # Collect all features
-    all_features = []
-    
-    # Base values for synthetic data (Karachi typical values)
-    base_temp = 28.0  # Average temperature
-    base_humidity = 65.0  # Average humidity
-    base_aqi = 120.0  # Typical AQI for Karachi
-    
-    # Progress tracking
-    success_count = 0
-    failed_count = 0
-    
-    logger.info("\nStarting backfill process...")
-    logger.info("─" * 70)
-    
-    pbar = tqdm(timestamps, desc="Backfilling", unit="hour", ncols=100)
-    for idx, timestamp in enumerate(pbar):
-        try:
-            # Fetch or generate AQI data
-            if use_synthetic:
-                aqi_data = generate_synthetic_aqi(timestamp, base_aqi)
-            else:
-                aqi_data = generate_synthetic_aqi(timestamp, base_aqi)
 
-            # Fetch or generate weather data
-            if use_synthetic:
-                weather_data = generate_synthetic_weather(base_temp, base_humidity, timestamp)
-            else:
-                unix_timestamp = int(timestamp.timestamp())
-                weather_data = fetch_historical_weather(
-                    CITY_CONFIG['lat'], CITY_CONFIG['lon'], unix_timestamp
-                )
-                if weather_data is None:
-                    weather_data = generate_synthetic_weather(base_temp, base_humidity, timestamp)
+    df = None
 
-            # Compute time features
-            time_features = compute_time_features(timestamp)
+    # ── Try OpenMeteo (free, no key) ────────────────────────────────────────
+    if use_openmeteo:
+        logger.info("\n>>> Attempting OpenMeteo backfill (free, no API key)...")
+        df = backfill_via_openmeteo(
+            CITY_CONFIG['lat'], CITY_CONFIG['lon'],
+            start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'),
+        )
+        if df is not None:
+            logger.info("✅ OpenMeteo backfill succeeded")
+        else:
+            logger.warning("⚠️  OpenMeteo backfill failed — falling back to synthetic")
 
-            # Merge all features
-            features = {'timestamp': timestamp, **aqi_data, **weather_data, **time_features}
+    # ── Fallback to Synthetic ───────────────────────────────────────────────
+    if df is None:
+        logger.info("\n>>> Using synthetic data generation (fallback)...")
+        df = backfill_via_synthetic(days_back)
+        if df.empty:
+            logger.error("❌ Synthetic backfill also failed")
+            return pd.DataFrame()
+        logger.info("✅ Synthetic data generated")
 
-            # Validate
-            is_valid, error_msg = validate_feature_data(features)
-            if is_valid:
-                all_features.append(features)
-                success_count += 1
-            else:
-                logger.warning(f"Validation failed for {timestamp}: {error_msg}")
-                failed_count += 1
-
-            # Rate limiting (if using real APIs)
-            if not use_synthetic and idx % 10 == 0:
-                time.sleep(1)
-
-        except Exception as e:
-            logger.error(f"Error processing {timestamp}: {e}")
-            failed_count += 1
-            continue
-    
-    logger.info("─" * 70)
-    logger.info(f"\nBackfill completed:")
-    logger.info(f"  ✅ Success: {success_count}/{total_hours}")
-    logger.info(f"  ❌ Failed: {failed_count}/{total_hours}")
-    
-    # Convert to DataFrame
-    df = pd.DataFrame(all_features)
-    
-    if df.empty:
-        logger.error("❌ No data collected. Aborting.")
-        return df
-    
     # Sort by timestamp
     df = df.sort_values('timestamp').reset_index(drop=True)
-    
-    # Compute derived features (rolling averages, etc.)
+
+    # Compute derived features (rolling averages, ratios, etc.)
     logger.info("\nComputing derived features...")
     df = compute_derived_features(df)
-    
-    logger.info(f"✅ Generated {len(df)} rows with {len(df.columns)} features")
-    
-    # Save locally
+    logger.info(f"✅ Final dataset: {len(df)} rows with {len(df.columns)} features")
+
+    print(f"\n📊 Dataset summary: {len(df)} rows, {len(df.columns)} columns")
+    print(f"   Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
+    print(f"   AQI range: [{df['aqi'].min():.0f}, {df['aqi'].max():.0f}], mean: {df['aqi'].mean():.0f}")
+
+    # ── Save locally ────────────────────────────────────────────────────────
     if save_local:
         logger.info("\nSaving to local CSV...")
         output_dir = "data/backfill"
         os.makedirs(output_dir, exist_ok=True)
-        
+
         filename = f"{output_dir}/backfill_{days_back}days_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         df.to_csv(filename, index=False)
         logger.info(f"✅ Saved to {filename}")
-        
+
         # Also save to main features file
         main_file = "data/features.csv"
         if os.path.exists(main_file):
@@ -412,19 +363,19 @@ def backfill_historical_data(
         else:
             df.to_csv(main_file, index=False)
             logger.info(f"✅ Created new features file: {main_file}")
-    
-    # Upload to Hopsworks
+
+    # ── Upload to Hopsworks ─────────────────────────────────────────────────
     if use_hopsworks:
         logger.info("\nUploading to Hopsworks...")
         try:
             import hopsworks
-            
+
             project = hopsworks.login(
                 api_key_value=HOPSWORKS_API_KEY,
                 project=HOPSWORKS_PROJECT_NAME
             )
             feature_store = project.get_feature_store()
-            
+
             feature_group = feature_store.get_or_create_feature_group(
                 name=FEATURE_GROUP_NAME,
                 version=FEATURE_GROUP_VERSION,
@@ -433,41 +384,39 @@ def backfill_historical_data(
                 event_time="timestamp",
                 online_enabled=True,
             )
-            
+
             feature_group.insert(df, write_options={"wait_for_job": True})
             logger.info(f"✅ Uploaded {len(df)} rows to Hopsworks")
-            
+
         except Exception as e:
             logger.error(f"❌ Failed to upload to Hopsworks: {e}")
-    
+
     logger.info("\n" + "=" * 70)
     logger.info("BACKFILL COMPLETED SUCCESSFULLY")
     logger.info("=" * 70)
-    
+
     return df
 
 
-def run(days: int = 90, synthetic: bool = True) -> bool:
+def run(days: int = 90, openmeteo: bool = True) -> bool:
     """
-    Run the backfill pipeline.
-    
+    Run the backfill pipeline. Tries OpenMeteo first, falls back to synthetic.
+
     Args:
         days: Number of days to backfill
-        synthetic: Use synthetic data (True) or try real APIs (False)
-    
+        openmeteo: Try OpenMeteo first (default True)
+
     Returns:
         True if successful, False otherwise
     """
     try:
         df = backfill_historical_data(
             days_back=days,
-            use_synthetic=synthetic,
+            use_openmeteo=openmeteo,
             save_local=True,
-            use_hopsworks=False  # Can enable later
+            use_hopsworks=False,
         )
-        
         return not df.empty
-        
     except Exception as e:
         logger.error(f"Backfill failed: {e}", exc_info=True)
         return False
@@ -475,7 +424,7 @@ def run(days: int = 90, synthetic: bool = True) -> bool:
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="AQI Historical Data Backfill")
     parser.add_argument(
         "--days",
@@ -484,44 +433,35 @@ if __name__ == "__main__":
         help="Number of days to backfill (default: 90)"
     )
     parser.add_argument(
-        "--synthetic",
+        "--no-openmeteo",
         action="store_true",
-        default=True,
-        help="Use synthetic data (default: True)"
-    )
-    parser.add_argument(
-        "--real",
-        action="store_true",
-        help="Try to use real API data (may fail for historical)"
+        help="Skip OpenMeteo and use synthetic data only"
     )
     parser.add_argument(
         "--hopsworks",
         action="store_true",
         help="Upload to Hopsworks Feature Store"
     )
-    
+
     args = parser.parse_args()
-    
-    # Determine if using synthetic or real data
-    use_synthetic = not args.real
-    
+
     try:
         logger.info("Starting backfill pipeline...")
-        
+
         df = backfill_historical_data(
             days_back=args.days,
-            use_synthetic=use_synthetic,
+            use_openmeteo=not args.no_openmeteo,
             save_local=True,
-            use_hopsworks=args.hopsworks
+            use_hopsworks=args.hopsworks,
         )
-        
+
         if not df.empty:
             logger.info(f"\n✅ Backfill successful! Generated {len(df)} rows.")
             sys.exit(0)
         else:
             logger.error("\n❌ Backfill failed - no data generated.")
             sys.exit(1)
-    
+
     except KeyboardInterrupt:
         logger.info("\n⚠️  Backfill interrupted by user")
         sys.exit(1)
