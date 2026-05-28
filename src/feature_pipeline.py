@@ -135,11 +135,11 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
 
         for col in int_columns:
             if col in features_df.columns:
-                features_df[col] = features_df[col].astype('int64')
+                features_df[col] = pd.to_numeric(features_df[col], errors='coerce').astype('Int64')
 
         for col in float_columns:
             if col in features_df.columns:
-                features_df[col] = features_df[col].astype('float64')
+                features_df[col] = pd.to_numeric(features_df[col], errors='coerce').astype('float64')
 
         # ── Timestamp naive UTC ───────────────────────────────────────────────
         features_df["timestamp"] = pd.to_datetime(
