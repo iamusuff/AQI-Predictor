@@ -304,20 +304,29 @@ def compute_features(aqi_data: Dict, weather_data: Dict) -> Dict:
     # Add timestamp
     features['timestamp'] = timestamp
     
+    # Replace this block at the end of compute_features()
     FLOAT_FIELDS = [
-        'aqi', 'pm25', 'pm10', 'o3', 'no2', 'so2', 'co',
-        'temperature', 'humidity', 'wind_speed', 'pressure', 'visibility', 'clouds'
+        'pm25', 'pm10', 'o3', 'no2', 'so2', 'co',
+        'temperature', 'wind_speed',
+    ]
+    INT_FIELDS = [
+        'aqi', 'humidity', 'pressure', 'visibility', 'clouds',
+        'hour', 'day_of_week', 'day_of_month', 'month', 'season', 'is_weekend',
     ]
 
     for field in FLOAT_FIELDS:
         val = features.get(field)
-        if val is None:
-            continue
         try:
-            cast = float(val)
-            features[field] = None if np.isnan(cast) else cast
+            features[field] = float(val) if val is not None else np.nan
         except (TypeError, ValueError):
-            features[field] = None
+            features[field] = np.nan
+
+    for field in INT_FIELDS:
+        val = features.get(field)
+        try:
+            features[field] = int(float(val)) if val is not None else 0
+        except (TypeError, ValueError):
+            features[field] = 0
 
     return features
 

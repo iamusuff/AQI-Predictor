@@ -118,42 +118,45 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
         logger.info(f"✅ Feature group confirmed: {feature_group.name} v{feature_group.version}")
 
         features_df = features_df.copy()
-
         features_df = features_df.drop(columns=['dominentpol'], errors='ignore')
 
-        # ── Enforce exact dtypes ──────────────────────────────────────────────
+        # ── Step 1: Replace all None/NaN with np.nan uniformly ───────────────────
+        features_df = features_df.where(pd.notnull(features_df), np.nan)
+
+        # ── Step 2: Force all columns to numeric first (kills any object dtype) ──
+        for col in features_df.columns:
+            if col == 'timestamp':
+                continue
+            features_df[col] = pd.to_numeric(features_df[col], errors='coerce')
+
+        # ── Step 3: Now cast to exact types Hopsworks expects ────────────────────
         int_columns = [
-            'aqi',
+            'aqi', 'pm25', 'pm10',
             'humidity', 'pressure', 'visibility', 'clouds',
             'hour', 'day_of_week', 'day_of_month', 'month',
             'season', 'is_weekend',
         ]
         float_columns = [
-            'pm25', 'pm10', 'o3', 'no2', 'so2', 'co',
+            'o3', 'no2', 'so2', 'co',
             'temperature', 'wind_speed',
         ]
 
         for col in int_columns:
             if col in features_df.columns:
-                features_df[col] = features_df[col].where(
-                    features_df[col].notna(), other=np.nan
-                )
-                features_df[col] = pd.to_numeric(features_df[col], errors='coerce').astype('Int64')
+                # Fill NaN with 0 for int columns — Hopsworks bigint cannot be null
+                features_df[col] = features_df[col].fillna(0).astype('int64')
 
         for col in float_columns:
             if col in features_df.columns:
-                features_df[col] = pd.to_numeric(
-                    features_df[col].where(features_df[col].notna(), other=np.nan),
-                    errors='coerce'
-                ).astype('float64')
+                features_df[col] = features_df[col].astype('float64')
 
-        # ── Timestamp naive UTC ───────────────────────────────────────────────
+        # ── Step 4: Timestamp naive UTC ───────────────────────────────────────────
         features_df["timestamp"] = pd.to_datetime(
             features_df["timestamp"], utc=True
         ).dt.tz_localize(None)
 
         logger.info(f"Dtypes after cast:\n{features_df.dtypes}")
-        logger.info(f"Inserting {len(features_df)} row(s)...")
+        logger.info(f"Values:\n{features_df.iloc[0].to_dict()}")
 
         feature_group.insert(
             features_df,
