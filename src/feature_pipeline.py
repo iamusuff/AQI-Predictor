@@ -85,7 +85,7 @@ def get_or_create_feature_group(feature_store, sample_df=None):
             primary_key=["timestamp"],
             event_time="timestamp",
             description="AQI prediction features for Karachi",
-            online_enabled=False,
+            online_enabled=True,
             stream=True,
         )
 
