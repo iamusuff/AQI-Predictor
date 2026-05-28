@@ -160,7 +160,7 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
 
         feature_group.insert(
             features_df,
-            write_options={"wait_for_job": False},
+            write_options={"wait_for_job": True},
             validation_options={"run_validation": False}
         )
 
