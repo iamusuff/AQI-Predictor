@@ -291,15 +291,14 @@ def compute_features(aqi_data: Dict, weather_data: Dict) -> Dict:
         'dominentpol': aqi_data.get('dominentpol'),
     })
     
-    # Add weather data
+    # Add weather data (OpenMeteo fields only)
     features.update({
-        'temperature': weather_data.get('temperature'),
-        'humidity': weather_data.get('humidity'),
-        'wind_speed': weather_data.get('wind_speed'),
-        'pressure': weather_data.get('pressure'),
-        'visibility': weather_data.get('visibility'),
-        'clouds': weather_data.get('clouds'),
-        'weather_main': weather_data.get('weather_main'),
+        'temperature': weather_data.get('temperature'),   # temperature_2m
+        'humidity': weather_data.get('humidity'),         # relative_humidity_2m
+        'wind_speed': weather_data.get('wind_speed'),     # wind_speed_10m
+        'pressure': weather_data.get('pressure'),         # pressure_msl
+        'visibility': weather_data.get('visibility'),     # visibility
+        'clouds': weather_data.get('clouds'),             # cloud_cover
     })
     
     # Add timestamp

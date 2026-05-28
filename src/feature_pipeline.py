@@ -119,15 +119,17 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
 
         features_df = features_df.copy()
 
+        features_df = features_df.drop(columns=['dominentpol'], errors='ignore')
+
         # ── Enforce exact dtypes ──────────────────────────────────────────────
         int_columns = [
-            'aqi', 'pm25', 'pm10',
+            'aqi',
             'humidity', 'pressure', 'visibility', 'clouds',
             'hour', 'day_of_week', 'day_of_month', 'month',
             'season', 'is_weekend',
         ]
         float_columns = [
-            'o3', 'no2', 'so2', 'co',
+            'pm25', 'pm10', 'o3', 'no2', 'so2', 'co',
             'temperature', 'wind_speed',
         ]
 
