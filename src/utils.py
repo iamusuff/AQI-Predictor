@@ -307,15 +307,18 @@ def compute_features(aqi_data: Dict, weather_data: Dict) -> Dict:
     
     FLOAT_FIELDS = [
         'aqi', 'pm25', 'pm10', 'o3', 'no2', 'so2', 'co',
-        'temperature', 'humidity', 'wind_speed', 'pressure',
-        'dew_point', 'wind_gust', 'visibility'
+        'temperature', 'humidity', 'wind_speed', 'pressure', 'visibility', 'clouds'
     ]
 
     for field in FLOAT_FIELDS:
-        if field in features:
-            features[field] = float(features[field])
-
-    return features
+        val = features.get(field)
+        if val is None:
+            continue
+        try:
+            cast = float(val)
+            features[field] = None if np.isnan(cast) else cast
+        except (TypeError, ValueError):
+            features[field] = None
 
     return features
 
