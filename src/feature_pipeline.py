@@ -1,6 +1,11 @@
 """
 Pearls AQI Predictor — Feature Pipeline
-Fetches real-time air quality & weather data, engineers features, and stores in Hopsworks.
+Fetches real-time air quality data (AQICN) & weather data (OpenMeteo), engineers features, 
+and stores in Hopsworks.
+
+Data Sources:
+  - AQICN API: Real-time pollutants (PM2.5, PM10, O3, NO2, SO2, CO)
+  - OpenMeteo API: Weather data (free, no API key required)
 
 This pipeline runs hourly via GitHub Actions to continuously update the feature store.
 """
@@ -21,7 +26,7 @@ from config import (
 )
 from utils import (
     fetch_aqicn_data,
-    fetch_openweather_data,
+    fetch_openmeteo_weather,
     compute_features,
     validate_feature_data,
 )
@@ -215,12 +220,21 @@ def run(use_hopsworks: bool = True, save_local: bool = True) -> bool:
     logger.info(f"✅ AQI: {aqi_data['aqi']}, PM2.5: {aqi_data['pm25']}, Dominant: {aqi_data['dominentpol']}")
 
     # ── Step 2: Fetch weather data ────────────────────────────────────────────
-    logger.info("\n[2/5] Fetching weather data from OpenWeather...")
-    weather_data = fetch_openweather_data()
-    if weather_data is None:
+    logger.info("\n[2/5] Fetching weather data from OpenMeteo (free, no API key required)...")
+    today = pd.Timestamp.utcnow().strftime('%Y-%m-%d')
+    weather_df = fetch_openmeteo_weather(
+        lat=CITY_CONFIG['lat'],
+        lon=CITY_CONFIG['lon'],
+        start_date=today,
+        end_date=today
+    )
+    if weather_df is None or weather_df.empty:
         logger.error("❌ Failed to fetch weather data. Aborting pipeline.")
         return False
-    logger.info(f"✅ Temp: {weather_data['temperature']}°C, Humidity: {weather_data['humidity']}%, Wind: {weather_data['wind_speed']} m/s")
+    
+    # Extract latest weather record (last row of today's data)
+    weather_data = weather_df.iloc[-1].to_dict()
+    logger.info(f"✅ Temp: {weather_data.get('temperature')}°C, Humidity: {weather_data.get('humidity')}%, Wind: {weather_data.get('wind_speed')} m/s")
 
     # ── Step 3: Compute features ──────────────────────────────────────────────
     logger.info("\n[3/5] Computing features...")
