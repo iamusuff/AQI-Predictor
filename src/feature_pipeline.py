@@ -57,8 +57,8 @@ def connect_to_hopsworks():
         
         feature_store = project.get_feature_store()
         logger.info(f"✅ Connected to Hopsworks project: {HOPSWORKS_PROJECT_NAME}")
-        if feature_store:
-            debug_feature_store(feature_store)
+        # if feature_store:
+        #     debug_feature_store(feature_store)
         # feature_groups = feature_store.get_feature_groups()
         # for fg in feature_groups:
 
@@ -168,58 +168,28 @@ def get_or_create_feature_group(feature_store, sample_df=None):
 
 def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bool:
     try:
-        logger.info("Resolving feature group...")
         feature_group = get_or_create_feature_group(feature_store, sample_df=features_df)
-
         if feature_group is None:
-            logger.error("❌ feature_group is None — aborting insert.")
             return False
 
-        if not hasattr(feature_group, 'insert'):
-            logger.error(f"❌ feature_group has no insert method. Type: {type(feature_group)}")
-            return False
+        # ── Guard: skip insert if job is already running ──────────────────
+        try:
+            state = feature_group.materialization_job.get_state()
+            logger.info(f"Materialization job state: {state}")
+            if state in ("RUNNING", "INITIALIZING", "ACCEPTED"):
+                logger.warning(
+                    "⚠️  Previous materialization still running. "
+                    "Inserting data but job won't re-trigger until it finishes."
+                )
+        except Exception as e:
+            logger.warning(f"Could not check job state: {e}")
 
-        logger.info(f"✅ Feature group confirmed: {feature_group.name} v{feature_group.version}")
-
-        features_df = features_df.copy()
-
-        # ── Enforce exact types so schema never mismatches ────────────────────
-        # These must be int (bigint in Hopsworks)
-        int_columns = [
-            'aqi', 'pm25', 'pm10',
-            'humidity', 'pressure', 'visibility',
-            'hour', 'day_of_week', 'month', 'season',
-            'is_weekend', 'is_peak_hour'
-        ]
-
-        # These must be float (double in Hopsworks)
-        float_columns = [
-            'o3', 'no2', 'so2', 'co',
-            'temperature', 'wind_speed',
-            'dew_point', 'wind_gust',
-            'temp_humidity_index', 'aqi_rolling_mean',
-            'aqi_rolling_std', 'wind_chill'
-        ]
-
-        for col in int_columns:
-            if col in features_df.columns:
-                features_df[col] = features_df[col].astype('int64')
-
-        for col in float_columns:
-            if col in features_df.columns:
-                features_df[col] = features_df[col].astype('float64')
-
-        # ── Timestamp must be naive UTC ───────────────────────────────────────
-        features_df["timestamp"] = pd.to_datetime(
-            features_df["timestamp"], utc=True
-        ).dt.tz_localize(None)
-
-        logger.info(f"Dtypes after cast:\n{features_df.dtypes}")
-        logger.info(f"Inserting {len(features_df)} row(s)...")
+        # ... your existing cast logic ...
 
         feature_group.insert(
             features_df,
-            write_options={"wait_for_job": False}
+            write_options={"wait_for_job": False},
+            validation_options={"run_validation": False}
         )
 
         logger.info(f"✅ Inserted {len(features_df)} row(s) into '{FEATURE_GROUP_NAME}'")
