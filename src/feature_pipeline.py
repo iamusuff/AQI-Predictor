@@ -75,9 +75,7 @@ def get_or_create_feature_group(feature_store, sample_df=None):
     except Exception as e:
         logger.warning(f"⚠️  get_feature_group raised exception — will attempt creation. Reason: {e}")
 
-    # ── Create feature group with stream=True ─────────────────────────────────
-    # stream=True means data is readable immediately after insert
-    # without waiting for offline materialization Spark job
+    # ── Create feature group ──────────────────────────────────────────────────
     try:
         logger.info(f"Creating feature group: {FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION}")
 
@@ -88,7 +86,7 @@ def get_or_create_feature_group(feature_store, sample_df=None):
             event_time="timestamp",
             description="AQI prediction features for Karachi",
             online_enabled=False,
-            stream=True,           # ← bypasses offline materialization job
+            stream=True,
         )
 
         if feature_group is None:
@@ -116,7 +114,7 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
 
         features_df = features_df.copy()
 
-        # ── Enforce exact dtypes so schema never mismatches ───────────────────
+        # ── Enforce exact dtypes ──────────────────────────────────────────────
         int_columns = [
             'aqi', 'pm25', 'pm10',
             'humidity', 'pressure', 'visibility', 'clouds',
@@ -136,7 +134,7 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
             if col in features_df.columns:
                 features_df[col] = features_df[col].astype('float64')
 
-        # ── Timestamp must be naive UTC ───────────────────────────────────────
+        # ── Timestamp naive UTC ───────────────────────────────────────────────
         features_df["timestamp"] = pd.to_datetime(
             features_df["timestamp"], utc=True
         ).dt.tz_localize(None)
@@ -151,6 +149,19 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
         )
 
         logger.info(f"✅ Inserted {len(features_df)} row(s) into '{FEATURE_GROUP_NAME}'")
+
+        # ── Verify data after insert ──────────────────────────────────────────
+        # Taake UI pe confirm ho sake ke data gaya
+        try:
+            logger.info("Verifying insert via fg.read()...")
+            df_check = feature_group.read(
+                read_options={"use_hive": False}
+            )
+            logger.info(f"✅ Verification: {len(df_check)} row(s) readable from feature store")
+            logger.info(f"Latest timestamp: {df_check['timestamp'].max()}")
+        except Exception as e:
+            logger.warning(f"⚠️  Verification read failed (insert may still be ok): {e}")
+
         return True
 
     except Exception as e:
