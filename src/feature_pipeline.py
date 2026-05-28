@@ -168,15 +168,15 @@ def insert_features_to_hopsworks(features_df: pd.DataFrame, feature_store) -> bo
 
         # ── Verify data after insert ──────────────────────────────────────────
         # Taake UI pe confirm ho sake ke data gaya
-        try:
-            logger.info("Verifying insert via fg.read()...")
-            df_check = feature_group.read(
-                read_options={"use_hive": False}
-            )
-            logger.info(f"✅ Verification: {len(df_check)} row(s) readable from feature store")
-            logger.info(f"Latest timestamp: {df_check['timestamp'].max()}")
-        except Exception as e:
-            logger.warning(f"⚠️  Verification read failed (insert may still be ok): {e}")
+        # try:
+        #     logger.info("Verifying insert via fg.read()...")
+        #     df_check = feature_group.read(
+        #         read_options={"use_hive": False}
+        #     )
+        #     logger.info(f"✅ Verification: {len(df_check)} row(s) readable from feature store")
+        #     logger.info(f"Latest timestamp: {df_check['timestamp'].max()}")
+        # except Exception as e:
+        #     logger.warning(f"⚠️  Verification read failed (insert may still be ok): {e}")
 
         return True
 
