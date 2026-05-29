@@ -75,7 +75,7 @@ def main():
 
     elif args.pipeline == "backfill":
         print(f"Running historical backfill ({args.days} days, OpenMeteo={'on' if not args.no_openmeteo else 'off'})...")
-        from backfill import run as run_backfill
+        from backfill import run_backfill as run_backfill
         run_backfill(days=args.days, openmeteo=not args.no_openmeteo)
 
     elif args.pipeline == "train":
