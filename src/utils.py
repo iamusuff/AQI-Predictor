@@ -494,7 +494,7 @@ def fetch_openmeteo_weather(lat: float, lon: float, start_date: str, end_date: s
             "visibility": hourly.get("visibility", [10000] * len(hourly["time"])),
             "clouds": hourly.get("cloud_cover", [0] * len(hourly["time"])),
         })
-
+        print(hourly["visibility"])
         # Drop rows where all weather values are null
         weather_cols = ["temperature", "humidity", "wind_speed", "pressure"]
         df = df.dropna(subset=weather_cols, how="all")
