@@ -2,7 +2,7 @@
 Pearls AQI Predictor — Training Pipeline
 Train multiple ML models, evaluate them, and register the best one.
 
-Models: Ridge Regression, Random Forest, XGBoost
+Models: Ridge Regression, Random Forest, XGBoost, LSTM, GRU
 """
 
 import pandas as pd
@@ -14,12 +14,25 @@ import os
 import joblib
 import json
 
+# ML libraries
 from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import xgboost as xgb
+
+# Deep learning
+try:
+    import tensorflow as tf
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import LSTM, GRU, Dense, Dropout
+    from tensorflow.keras.callbacks import EarlyStopping
+    TF_AVAILABLE = True
+except ImportError:
+    TF_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("⚠️  TensorFlow not available — LSTM/GRU models will be skipped.")
 
 # Configure logging
 logging.basicConfig(
@@ -272,6 +285,128 @@ def train_xgboost(X_train, y_train, X_val, y_val, n_estimators=100, max_depth=6,
     
     logger.info(f"✅ XGBoost - Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
     
+    return model, metrics
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Deep Learning Models (LSTM / GRU)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _prepare_sequences(X, y, time_steps=24):
+    """Reshape data into [samples, time_steps, features] for RNN models."""
+    n = len(X)
+    if n < time_steps:
+        return None, None
+    X_out = np.array([X[i - time_steps:i] for i in range(time_steps, n)])
+    y_out = y[time_steps:]
+    return X_out, y_out
+
+
+def train_lstm(X_train_seq, y_train_seq, X_val_seq, y_val_seq, epochs=50, units=64):
+    """
+    Train LSTM model for time-series AQI prediction.
+
+    Args:
+        X_train_seq, y_train_seq: Sequence training data
+        X_val_seq, y_val_seq: Sequence validation data
+        epochs: Number of training epochs
+        units: Number of LSTM units
+
+    Returns:
+        model, metrics
+    """
+    if not TF_AVAILABLE:
+        logger.warning("⚠️  Skipping LSTM — TensorFlow not available")
+        return None, None
+
+    logger.info("Training LSTM...")
+    time_steps = X_train_seq.shape[1]
+    n_features = X_train_seq.shape[2]
+
+    model = Sequential([
+        LSTM(units, activation='tanh', return_sequences=True, input_shape=(time_steps, n_features)),
+        Dropout(0.2),
+        LSTM(units // 2, activation='tanh'),
+        Dropout(0.2),
+        Dense(1),
+    ])
+
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+    model.fit(
+        X_train_seq, y_train_seq,
+        validation_data=(X_val_seq, y_val_seq),
+        epochs=epochs, batch_size=32, callbacks=[early_stop], verbose=0,
+    )
+
+    y_train_pred = model.predict(X_train_seq, verbose=0).flatten()
+    y_val_pred = model.predict(X_val_seq, verbose=0).flatten()
+
+    metrics = {
+        'train_rmse': float(np.sqrt(mean_squared_error(y_train_seq, y_train_pred))),
+        'train_mae': float(mean_absolute_error(y_train_seq, y_train_pred)),
+        'train_r2': float(r2_score(y_train_seq, y_train_pred)),
+        'val_rmse': float(np.sqrt(mean_squared_error(y_val_seq, y_val_pred))),
+        'val_mae': float(mean_absolute_error(y_val_seq, y_val_pred)),
+        'val_r2': float(r2_score(y_val_seq, y_val_pred)),
+    }
+
+    logger.info(f"✅ LSTM - Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
+    return model, metrics
+
+
+def train_gru(X_train_seq, y_train_seq, X_val_seq, y_val_seq, epochs=50, units=64):
+    """
+    Train GRU model for time-series AQI prediction.
+
+    Args:
+        X_train_seq, y_train_seq: Sequence training data
+        X_val_seq, y_val_seq: Sequence validation data
+        epochs: Number of training epochs
+        units: Number of GRU units
+
+    Returns:
+        model, metrics
+    """
+    if not TF_AVAILABLE:
+        logger.warning("⚠️  Skipping GRU — TensorFlow not available")
+        return None, None
+
+    logger.info("Training GRU...")
+    time_steps = X_train_seq.shape[1]
+    n_features = X_train_seq.shape[2]
+
+    model = Sequential([
+        GRU(units, activation='tanh', return_sequences=True, input_shape=(time_steps, n_features)),
+        Dropout(0.2),
+        GRU(units // 2, activation='tanh'),
+        Dropout(0.2),
+        Dense(1),
+    ])
+
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+    model.fit(
+        X_train_seq, y_train_seq,
+        validation_data=(X_val_seq, y_val_seq),
+        epochs=epochs, batch_size=32, callbacks=[early_stop], verbose=0,
+    )
+
+    y_train_pred = model.predict(X_train_seq, verbose=0).flatten()
+    y_val_pred = model.predict(X_val_seq, verbose=0).flatten()
+
+    metrics = {
+        'train_rmse': float(np.sqrt(mean_squared_error(y_train_seq, y_train_pred))),
+        'train_mae': float(mean_absolute_error(y_train_seq, y_train_pred)),
+        'train_r2': float(r2_score(y_train_seq, y_train_pred)),
+        'val_rmse': float(np.sqrt(mean_squared_error(y_val_seq, y_val_pred))),
+        'val_mae': float(mean_absolute_error(y_val_seq, y_val_pred)),
+        'val_r2': float(r2_score(y_val_seq, y_val_pred)),
+    }
+
+    logger.info(f"✅ GRU - Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
     return model, metrics
 
 
@@ -539,7 +674,7 @@ def run(data_path: str = "data/features.csv", save_models: bool = True, use_hops
     results = {}
     
     # 1. Ridge Regression (Baseline)
-    logger.info("\n[1/3] Ridge Regression (Baseline)")
+    logger.info("\n[1/5] Ridge Regression (Baseline)")
     ridge_model, ridge_metrics = train_ridge_regression(
         X_train_scaled, y_train, X_val_scaled, y_val
     )
@@ -551,7 +686,7 @@ def run(data_path: str = "data/features.csv", save_models: bool = True, use_hops
     }
     
     # 2. Random Forest
-    logger.info("\n[2/3] Random Forest")
+    logger.info("\n[2/5] Random Forest")
     rf_model, rf_metrics = train_random_forest(
         X_train_scaled, y_train, X_val_scaled, y_val
     )
@@ -563,7 +698,7 @@ def run(data_path: str = "data/features.csv", save_models: bool = True, use_hops
     }
     
     # 3. XGBoost
-    logger.info("\n[3/3] XGBoost")
+    logger.info("\n[3/5] XGBoost")
     xgb_model, xgb_metrics = train_xgboost(
         X_train_scaled, y_train, X_val_scaled, y_val
     )
@@ -573,6 +708,60 @@ def run(data_path: str = "data/features.csv", save_models: bool = True, use_hops
         'metrics': xgb_metrics,
         'test_metrics': xgb_test_metrics
     }
+    
+    # 4. LSTM
+    logger.info("\n[4/5] LSTM (Deep Learning)")
+    if TF_AVAILABLE:
+        X_train_seq, y_train_seq = _prepare_sequences(X_train_scaled, y_train)
+        X_val_seq, y_val_seq = _prepare_sequences(X_val_scaled, y_val)
+        X_test_seq, y_test_seq = _prepare_sequences(X_test_scaled, y_test)
+        
+        if X_train_seq is not None:
+            lstm_model, lstm_metrics = train_lstm(X_train_seq, y_train_seq, X_val_seq, y_val_seq)
+            if lstm_model is not None:
+                # Evaluate on test sequences
+                lstm_pred = lstm_model.predict(X_test_seq, verbose=0).flatten()
+                lstm_test_metrics = {
+                    'test_rmse': float(np.sqrt(mean_squared_error(y_test_seq, lstm_pred))),
+                    'test_mae': float(mean_absolute_error(y_test_seq, lstm_pred)),
+                    'test_r2': float(r2_score(y_test_seq, lstm_pred)),
+                }
+                results['LSTM'] = {
+                    'model': lstm_model,
+                    'metrics': lstm_metrics,
+                    'test_metrics': lstm_test_metrics,
+                }
+                logger.info(f"   LSTM Test — RMSE: {lstm_test_metrics['test_rmse']:.2f}, R²: {lstm_test_metrics['test_r2']:.4f}")
+            else:
+                logger.warning("⚠️  Skipping LSTM (model returned None)")
+        else:
+            logger.warning("⚠️  Not enough data for LSTM sequences (need >= 24 samples)")
+    else:
+        logger.warning("⚠️  TensorFlow not available — skipping LSTM")
+    
+    # 5. GRU
+    logger.info("\n[5/5] GRU (Deep Learning)")
+    if TF_AVAILABLE and X_train_seq is not None:
+        gru_model, gru_metrics = train_gru(X_train_seq, y_train_seq, X_val_seq, y_val_seq)
+        if gru_model is not None:
+            gru_pred = gru_model.predict(X_test_seq, verbose=0).flatten()
+            gru_test_metrics = {
+                'test_rmse': float(np.sqrt(mean_squared_error(y_test_seq, gru_pred))),
+                'test_mae': float(mean_absolute_error(y_test_seq, gru_pred)),
+                'test_r2': float(r2_score(y_test_seq, gru_pred)),
+            }
+            results['GRU'] = {
+                'model': gru_model,
+                'metrics': gru_metrics,
+                'test_metrics': gru_test_metrics,
+            }
+            logger.info(f"   GRU Test — RMSE: {gru_test_metrics['test_rmse']:.2f}, R²: {gru_test_metrics['test_r2']:.4f}")
+        else:
+            logger.warning("⚠️  Skipping GRU (model returned None)")
+    elif TF_AVAILABLE:
+        logger.warning("⚠️  Not enough data for GRU sequences (need >= 24 samples)")
+    else:
+        logger.warning("⚠️  TensorFlow not available — skipping GRU")
     
     # ── Step 6: Compare Models ────────────────────────────────────────────────
     best_model_name, comparison_df = compare_models(results)

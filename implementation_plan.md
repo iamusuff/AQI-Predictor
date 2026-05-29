@@ -81,7 +81,7 @@ AQI_Predictor/
 |-------|------|-----------|
 | **Data APIs** | AQICN + OpenWeatherMap | AQICN gives real-time AQI & pollutants; OpenWeather provides weather context (temp, humidity, wind). Both have free tiers. |
 | **Feature Store** | Hopsworks (free tier) | Purpose-built ML feature store with versioning, time-travel, and a model registry — all free for serverless tier. |
-| **ML Models** | Scikit-learn + XGBoost | Scikit-learn for baselines (Random Forest, Ridge); XGBoost for gradient boosting. |
+| **ML Models** | Scikit-learn + TensorFlow | Scikit-learn for baselines (Random Forest, Ridge); TensorFlow for LSTM/GRU deep learning models. |
 | **Explainability** | SHAP | Works with both sklearn and TF models; generates intuitive feature importance plots. |
 | **CI/CD** | GitHub Actions | Free, zero-infrastructure, cron-capable workflows. |
 | **Dashboard** | Streamlit | Fast prototyping of interactive ML dashboards with charts and maps. |
@@ -95,7 +95,7 @@ AQI_Predictor/
 > **Goal**: Set up the repository, install dependencies, and configure API access.
 
 #### [NEW] [requirements.txt](file:///c:/Users/user/Desktop/AQI_Predictor/requirements.txt)
-- Core: `pandas`, `numpy`, `scikit-learn`, `xgboost`, `hopsworks`
+- Core: `pandas`, `numpy`, `scikit-learn`, `tensorflow`, `hopsworks`
 - Data: `requests`, `python-dotenv`
 - Explainability: `shap`
 - Viz: `matplotlib`, `seaborn`, `plotly`
@@ -194,7 +194,8 @@ AQI_Predictor/
 | Ridge Regression | Baseline | Simple linear baseline |
 | Random Forest | Ensemble | Good for tabular data, handles non-linearity |
 | XGBoost / Gradient Boosting | Ensemble | Often top performer for tabular data |
-
+| LSTM (TensorFlow) | Deep Learning | Captures temporal dependencies in time-series |
+| GRU (TensorFlow) | Deep Learning | Lighter alternative to LSTM |
 
 **Step 3 — Evaluation**:
 - Metrics: **RMSE**, **MAE**, **R²** for each model
@@ -295,7 +296,7 @@ schedule:
 
 1. **Target city**: Which city should we start with? (I'll set up the config to support multiple cities later)
 2. **Historical data depth**: How far back should we backfill? I suggest 90–180 days for a good training set.
-3. *(Removed — deep learning models not required for current scope)*
+3. **Deep learning priority**: Should we prioritize getting sklearn models working first and add TensorFlow/LSTM later, or tackle both simultaneously?
 4. **Report format**: The project mentions a "detailed report" — should this be a PDF, a Jupyter notebook, or a markdown document?
 
 ---

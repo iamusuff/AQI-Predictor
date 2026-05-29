@@ -7,7 +7,7 @@
 
 **Features:**
 - ⏰ Automated hourly data collection from AQICN & OpenWeather APIs
-- 🔄 Daily model retraining with multiple ML algorithms (Ridge, Random Forest, XGBoost)
+- 🔄 Daily model retraining with multiple ML algorithms (Ridge, Random Forest, XGBoost, LSTM, GRU)
 - 📊 Interactive Streamlit dashboard with 3-day forecasts
 - 🎯 SHAP-based explainability for predictions
 - 🚨 Real-time health alerts for hazardous AQI levels
@@ -124,7 +124,7 @@ streamlit run app/streamlit_app.py
 |-------|------|
 | Data APIs | AQICN, OpenWeatherMap |
 | Feature Store | Hopsworks |
-| ML Models | Scikit-learn, XGBoost |
+| ML Models | Scikit-learn, XGBoost, TensorFlow |
 | Explainability | SHAP |
 | CI/CD | GitHub Actions |
 | Dashboard | Streamlit |
