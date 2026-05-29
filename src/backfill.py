@@ -353,7 +353,7 @@ def insert_to_hopsworks(
         try:
             feature_group.insert(
                 chunk,
-                write_options={"wait_for_job": True},
+                write_options={"wait_for_job": False},
                 validation_options={"run_validation": False},
             )
             logger.info(f"  ✅ Chunk {idx}/{len(chunks)} inserted ({len(chunk)} rows)")
