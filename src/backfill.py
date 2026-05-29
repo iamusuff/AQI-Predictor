@@ -280,17 +280,20 @@ def engineer_features(raw_df: pd.DataFrame) -> pd.DataFrame:
 def connect_to_hopsworks():
     try:
         import hopsworks
+
         logger.info("Connecting to Hopsworks...")
         project = hopsworks.login(
             host="eu-west.cloud.hopsworks.ai",
             api_key_value=HOPSWORKS_API_KEY,
-            project=HOPSWORKS_PROJECT_NAME,
+            project=HOPSWORKS_PROJECT_NAME
         )
+
         feature_store = project.get_feature_store()
         logger.info(f"✅ Connected to Hopsworks project: {HOPSWORKS_PROJECT_NAME}")
         return project, feature_store
+
     except ImportError:
-        logger.warning("⚠️  Hopsworks library not installed. Features will be saved locally only.")
+        logger.warning("⚠️  Hopsworks library not installed. Features will be saved locally.")
         return None, None
     except Exception as e:
         logger.error(f"❌ Failed to connect to Hopsworks: {e}")

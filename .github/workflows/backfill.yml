@@ -26,10 +26,25 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Run backfill pipeline
+      - name: Create .env file
         env:
+          AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
           HOPSWORKS_PROJECT_NAME: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
-          AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
+          CITY: ${{ secrets.CITY || 'karachi' }}
+          CITY_LAT: ${{ secrets.CITY_LAT || '24.8607' }}
+          CITY_LON: ${{ secrets.CITY_LON || '67.0011' }}
+
+        run: |
+          echo "AQICN_API_KEY=$AQICN_API_KEY" >> .env
+          echo "OPENWEATHER_API_KEY=$OPENWEATHER_API_KEY" >> .env
+          echo "HOPSWORKS_API_KEY=$HOPSWORKS_API_KEY" >> .env
+          echo "HOPSWORKS_PROJECT_NAME=$HOPSWORKS_PROJECT_NAME" >> .env
+          echo "CITY=$CITY" >> .env
+          echo "CITY_LAT=$CITY_LAT" >> .env
+          echo "CITY_LON=$CITY_LON" >> .env
+
+      - name: Run backfill pipeline
         run: |
           python main.py --pipeline backfill --days ${{ github.event.inputs.days || 90 }}
