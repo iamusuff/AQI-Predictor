@@ -222,7 +222,14 @@ def engineer_features(raw_df: pd.DataFrame) -> pd.DataFrame:
     df = pd.concat([df, time_features], axis=1)
 
     # ── 3. Cast pollutants → float64 ─────────────────────────────────────────
-    float_cols = ['pm25', 'pm10', 'o3', 'no2', 'so2', 'co', 'temperature', 'wind_speed']
+    float_cols = ['o3', 'no2', 'so2', 'co', 'temperature', 'wind_speed']  # pm25, pm10 removed
+
+    int_cols = [
+        'aqi', 'pm25', 'pm10',   # ← add these
+        'humidity', 'pressure', 'visibility', 'clouds',
+        'hour', 'day_of_week', 'day_of_month', 'month', 'season', 'is_weekend',
+    ]
+    
     for col in float_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').astype('float64')
@@ -231,10 +238,7 @@ def engineer_features(raw_df: pd.DataFrame) -> pd.DataFrame:
 
     # ── 4. Cast weather + time columns → int64 ───────────────────────────────
     # Hopsworks bigint columns cannot be null; fill with 0.
-    int_cols = [
-        'aqi', 'humidity', 'pressure', 'visibility', 'clouds',
-        'hour', 'day_of_week', 'day_of_month', 'month', 'season', 'is_weekend',
-    ]
+    
     for col in int_cols:
         if col in df.columns:
             df[col] = (
