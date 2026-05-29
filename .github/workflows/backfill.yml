@@ -1,0 +1,35 @@
+name: Historical Backfill Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Number of days to backfill"
+        required: false
+        default: "90"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run backfill pipeline
+        env:
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+          HOPSWORKS_PROJECT_NAME: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
+          AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
+        run: |
+          python main.py --pipeline backfill --days ${{ github.event.inputs.days || 90 }}
