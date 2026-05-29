@@ -229,7 +229,7 @@ def engineer_features(raw_df: pd.DataFrame) -> pd.DataFrame:
         'humidity', 'pressure', 'visibility', 'clouds',
         'hour', 'day_of_week', 'day_of_month', 'month', 'season', 'is_weekend',
     ]
-    
+
     for col in float_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').astype('float64')
@@ -360,7 +360,7 @@ def insert_to_hopsworks(
         try:
             feature_group.insert(
                 chunk,
-                write_options={"wait_for_job": False},
+                write_options={"wait_for_job": True},
                 validation_options={"run_validation": False},
             )
             logger.info(f"  ✅ Chunk {idx}/{len(chunks)} inserted ({len(chunk)} rows)")
