@@ -340,42 +340,25 @@ def get_or_create_feature_group(feature_store, sample_df: Optional[pd.DataFrame]
 def insert_to_hopsworks(
     features_df: pd.DataFrame,
     feature_store,
-    chunk_size: int = 168,   # 1 week of hourly data per chunk
 ) -> bool:
-    """
-    Insert features into Hopsworks in chunks to avoid request size limits.
-    For large backfills (2 160 rows for 90 days), chunking is essential.
-    """
     feature_group = get_or_create_feature_group(feature_store, sample_df=features_df)
     if feature_group is None:
         logger.error("❌ feature_group is None — aborting insert.")
         return False
 
-    total_rows = len(features_df)
-    chunks = [features_df.iloc[i:i + chunk_size] for i in range(0, total_rows, chunk_size)]
-    logger.info(f"Inserting {total_rows} rows in {len(chunks)} chunk(s) of up to {chunk_size} rows...")
+    try:
+        logger.info(f"Inserting {len(features_df)} rows in a single job...")
+        feature_group.insert(
+            features_df,
+            write_options={"wait_for_job": False},
+            validation_options={"run_validation": False},
+        )
+        logger.info(f"✅ Insert job submitted ({len(features_df)} rows)")
+        return True
 
-    success_count = 0
-    for idx, chunk in enumerate(chunks, start=1):
-        try:
-            feature_group.insert(
-                chunk,
-                write_options={"wait_for_job": True},
-                validation_options={"run_validation": False},
-            )
-            logger.info(f"  ✅ Chunk {idx}/{len(chunks)} inserted ({len(chunk)} rows)")
-            success_count += 1
-
-            # Small delay between chunks to avoid rate-limiting
-            if idx < len(chunks):
-                time.sleep(1)
-
-        except Exception as e:
-            logger.error(f"  ❌ Chunk {idx}/{len(chunks)} failed: {e}", exc_info=True)
-            # Continue with next chunk rather than aborting entirely
-
-    logger.info(f"Insert complete: {success_count}/{len(chunks)} chunks succeeded")
-    return success_count == len(chunks)
+    except Exception as e:
+        logger.error(f"❌ Insert failed: {e}", exc_info=True)
+        return False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -507,7 +490,7 @@ def run_live(use_hopsworks: bool = True, save_local: bool = True) -> bool:
     if use_hopsworks:
         project, feature_store = connect_to_hopsworks()
         if feature_store is not None:
-            hopsworks_success = insert_to_hopsworks(latest_row, feature_store, chunk_size=1)
+            hopsworks_success = insert_to_hopsworks(latest_row, feature_store)
 
     if save_local:
         save_features_locally(latest_row)
