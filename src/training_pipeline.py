@@ -84,6 +84,42 @@ def connect_to_hopsworks():
 # Data Loading
 # ─────────────────────────────────────────────────────────────────────────────
 
+def clean_hopsworks_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Fix stringified array values returned by Hopsworks fg.read()
+    e.g. '[1.4101299E2]' → 142.01
+    """
+
+    float_cols = ['o3', 'no2', 'so2', 'co', 'temperature', 'wind_speed']
+    int_cols   = [
+        'aqi', 'pm25', 'pm10',
+        'humidity', 'pressure', 'visibility', 'clouds',
+        'hour', 'day_of_week', 'day_of_month', 'month',
+        'season', 'is_weekend',
+    ]
+
+    # ── Float columns ─────────────────────────────────────────────────────────
+    for col in float_cols:
+        if col in df.columns:
+            df[col] = (
+                df[col].astype(str)
+                       .str.replace(r'[\[\]]', '', regex=True)  # strip [ ]
+                       .str.strip()
+            )
+            df[col] = pd.to_numeric(df[col], errors='coerce').astype('float64')
+
+    # ── Int columns ───────────────────────────────────────────────────────────
+    for col in int_cols:
+        if col in df.columns:
+            df[col] = (
+                df[col].astype(str)
+                       .str.replace(r'[\[\]]', '', regex=True)
+                       .str.strip()
+            )
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('int64')
+
+    return df
+
 def load_data_from_hopsworks(feature_store) -> pd.DataFrame:
     """
     Load training data from Hopsworks Feature Store.
@@ -97,6 +133,16 @@ def load_data_from_hopsworks(feature_store) -> pd.DataFrame:
             version=FEATURE_GROUP_VERSION
         )
         df = fg.read()
+
+        # ── Print sample record to verify types ──────────────────────────────────
+        logger.info("Sample record (first row) with dtypes:")
+        sample = df.iloc[0]
+        for col, val in sample.items():
+            logger.info(f"  {col:<20} {str(type(val)._name_):<12} {val}")
+        
+        df = clean_hopsworks_dataframe(df)   # ← fix before anything else touches df
+        logger.info(f"✅ Dtypes after clean:\n{df.dtypes.to_string()}")
+
         logger.info(f"✅ Loaded {len(df)} rows from Hopsworks Feature Store")
         return df
     except Exception as e:
