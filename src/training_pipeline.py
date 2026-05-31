@@ -138,7 +138,7 @@ def load_data_from_hopsworks(feature_store) -> pd.DataFrame:
         logger.info("Sample record (first row) with dtypes:")
         sample = df.iloc[0]
         for col, val in sample.items():
-            logger.info(f"  {col:<20} {str(type(val)._name_):<12} {val}")
+            logger.info(f"  {col:<20} dtype={df[col].dtype!s:<12} val={val}")
         
         df = clean_hopsworks_dataframe(df)   # ← fix before anything else touches df
         logger.info(f"✅ Dtypes after clean:\n{df.dtypes.to_string()}")
