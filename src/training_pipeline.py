@@ -401,14 +401,36 @@ def compute_shap_importance(model, X_train_scaled, feature_names, model_name: st
         import shap
         logger.info("Computing SHAP feature importance...")
 
-        if model_name in ["Random Forest", "XGBoost"]:
+        # ── Debug input ───────────────────────────────────────────────────────
+        logger.info(f"  X_train_scaled dtype  : {X_train_scaled.dtype}")
+        logger.info(f"  X_train_scaled shape  : {X_train_scaled.shape}")
+        logger.info(f"  Any NaN               : {np.isnan(X_train_scaled).any()}")
+        logger.info(f"  Any Inf               : {np.isinf(X_train_scaled).any()}")
+        logger.info(f"  model_name            : {model_name}")
+        logger.info(f"  SHAP version          : {shap.__version__}")
+        if model_name == "XGBoost":
+            logger.info(f"  XGBoost version       : {xgb.__version__}")
+
+        # ── Force float64 once ────────────────────────────────────────────────
+        sample = np.asarray(X_train_scaled[:500], dtype=np.float64)
+        logger.info(f"  Sample dtype after cast : {sample.dtype}")
+        logger.info(f"  Sample shape            : {sample.shape}")
+
+        # ── Build explainer ───────────────────────────────────────────────────
+        if model_name == "XGBoost":
+            logger.info("  Building TreeExplainer with model.get_booster()...")
+            explainer = shap.TreeExplainer(model.get_booster())
+        elif model_name == "Random Forest":
+            logger.info("  Building TreeExplainer for Random Forest...")
             explainer = shap.TreeExplainer(model)
         else:
-            explainer = shap.LinearExplainer(model, X_train_scaled)
+            logger.info(f"  Building LinearExplainer for {model_name}...")
+            explainer = shap.LinearExplainer(model, sample)
 
-        # Use a sample of 500 rows max for speed
-        sample = X_train_scaled[:500]
+        logger.info("  Running explainer.shap_values()...")
         shap_values = explainer.shap_values(sample)
+        logger.info(f"  shap_values type  : {type(shap_values)}")
+        logger.info(f"  shap_values shape : {np.array(shap_values).shape}")
 
         importance_df = pd.DataFrame({
             'feature':          feature_names,
