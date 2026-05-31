@@ -419,7 +419,7 @@ def compute_shap_importance(model, X_train_scaled, feature_names, model_name: st
         # ── Build explainer ───────────────────────────────────────────────────
         if model_name == "XGBoost":
             logger.info("  Building TreeExplainer with model.get_booster()...")
-            explainer = shap.TreeExplainer(model.get_booster())
+            explainer = shap.TreeExplainer(model)
         elif model_name == "Random Forest":
             logger.info("  Building TreeExplainer for Random Forest...")
             explainer = shap.TreeExplainer(model)
