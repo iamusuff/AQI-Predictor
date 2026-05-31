@@ -182,20 +182,33 @@ def load_data(filepath: str = "data/features.csv") -> pd.DataFrame:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def prepare_features_and_target(df: pd.DataFrame, target_col: str = 'aqi'):
-    """
-    Prepare features (X) and target (y) for training.
-    """
     logger.info("Preparing features and target...")
+
+    # ── Strip timezone from timestamp before exclusion ────────────────────────
+    if 'timestamp' in df.columns:
+        df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize(None)
 
     exclude_cols = ['timestamp', 'aqi', 'dominentpol', 'weather_main', 'weather_description']
     feature_cols = [col for col in df.columns if col not in exclude_cols]
 
-    X = df[feature_cols].values
-    y = df[target_col].values
+    # ── Catch any object columns that slipped through clean ───────────────────
+    for col in feature_cols:
+        if df[col].dtype == object:
+            logger.warning(f"⚠️  Object dtype still present in '{col}' — forcing numeric")
+            df[col] = (
+                df[col].astype(str)
+                       .str.replace(r'[\[\]]', '', regex=True)
+                       .str.strip()
+            )
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-    logger.info(f"✅ Features : {len(feature_cols)} columns — {feature_cols}")
-    logger.info(f"✅ Target   : {target_col}")
-    logger.info(f"✅ Samples  : {len(X)}")
+    # ── Force entire array to float64 — SHAP and scaler both require this ─────
+    X = df[feature_cols].values.astype(np.float64)
+    y = df[target_col].values.astype(np.float64)
+
+    logger.info(f"✅ X dtype  : {X.dtype}  shape: {X.shape}")   # must say float64
+    logger.info(f"✅ y dtype  : {y.dtype}")
+    logger.info(f"✅ Features : {feature_cols}")
 
     return X, y, feature_cols
 
