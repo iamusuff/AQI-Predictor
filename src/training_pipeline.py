@@ -613,7 +613,7 @@ def register_model_in_hopsworks(model, scaler, feature_names, metrics, model_nam
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run(data_path: str = "data/features.csv", save_models: bool = True,
-        use_hopsworks: bool = True):
+        use_hopsworks: bool = True, window_days: int = 90):
     logger.info("=" * 70)
     logger.info("TRAINING PIPELINE STARTED")
     logger.info("=" * 70)
@@ -624,7 +624,11 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
 
     # Sort by timestamp — critical for temporal split correctness
     df = df.sort_values('timestamp').reset_index(drop=True)
-    logger.info(f"  Date range: {df['timestamp'].min()} → {df['timestamp'].max()}")
+    logger.info(f"  Full date range: {df['timestamp'].min()} → {df['timestamp'].max()}")
+
+    # ── Rolling window: train only on recent data to reduce distribution shift ──
+    df = get_rolling_window_data(df, window_days=window_days)
+    logger.info(f"  Windowed range : {df['timestamp'].min()} → {df['timestamp'].max()}")
 
     # ── Step 2: Prepare features and target ───────────────────────────────────
     logger.info("\n[2/8] Preparing features and target...")
@@ -769,10 +773,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="AQI Training Pipeline")
-    parser.add_argument("--data",        type=str,  default="data/features.csv",
+    parser.add_argument("--data",         type=str,  default="data/features.csv",
                         help="Path to local CSV (used only if Hopsworks fails)")
-    parser.add_argument("--no-save",     action="store_true", help="Don't save trained models locally")
-    parser.add_argument("--no-hopsworks",action="store_true", help="Skip Hopsworks model registry")
+    parser.add_argument("--no-save",      action="store_true", help="Don't save trained models locally")
+    parser.add_argument("--no-hopsworks", action="store_true", help="Skip Hopsworks model registry")
+    parser.add_argument("--window-days",  type=int,  default=90,
+                        help="Rolling training window in days (default: 90)")
 
     args = parser.parse_args()
 
@@ -781,6 +787,7 @@ if __name__ == "__main__":
             data_path=args.data,
             save_models=not args.no_save,
             use_hopsworks=not args.no_hopsworks,
+            window_days=args.window_days,
         )
         sys.exit(0)
     except Exception as e:
