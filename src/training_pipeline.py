@@ -633,7 +633,8 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
 
     # 2. Random Forest
     logger.info("\n  [2/5] Random Forest")
-    rf_model, rf_metrics = train_random_forest(X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights)results['Random Forest'] = {
+    rf_model, rf_metrics = train_random_forest(X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights)
+    results['Random Forest'] = {
         'model':        rf_model,
         'metrics':      rf_metrics,
         'test_metrics': evaluate_model(rf_model, X_test_scaled, y_test, "Random Forest"),
