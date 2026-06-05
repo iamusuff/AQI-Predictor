@@ -293,31 +293,65 @@ def _compute_metrics(y_true_train, y_pred_train, y_true_val, y_pred_val) -> dict
 
 def train_ridge_regression(X_train, y_train, X_val, y_val, alpha=1.0):
     logger.info("Training Ridge Regression...")
-    model = Ridge(alpha=alpha, random_state=42)
+    from sklearn.linear_model import RidgeCV
+    model = RidgeCV(
+        alphas=[0.1, 1.0, 10.0, 100.0, 1000.0],
+        cv=5                       # auto-picks best alpha via cross-validation
+    )
     model.fit(X_train, y_train)
+    logger.info(f"   Best alpha: {model.alpha_}")
     metrics = _compute_metrics(y_train, model.predict(X_train), y_val, model.predict(X_val))
     logger.info(f"✅ Ridge — Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
     return model, metrics
 
 
-def train_random_forest(X_train, y_train, X_val, y_val, n_estimators=100, max_depth=20, sample_weight=None):
+def train_random_forest(X_train, y_train, X_val, y_val,
+                        n_estimators=200, max_depth=12,
+                        sample_weight=None):
     logger.info("Training Random Forest...")
-    model = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, random_state=42, n_jobs=-1)
+    model = RandomForestRegressor(
+        n_estimators=n_estimators,
+        max_depth=12,            # was 20 — shallower trees generalize better
+        min_samples_split=10,    # need 10 samples to split a node
+        min_samples_leaf=5,      # smoother leaf predictions
+        max_features=0.7,        # use 70% of features per tree
+        max_samples=0.8,         # bagging: train each tree on 80% of rows
+        random_state=42,
+        n_jobs=-1
+    )
     model.fit(X_train, y_train, sample_weight=sample_weight)
     metrics = _compute_metrics(y_train, model.predict(X_train), y_val, model.predict(X_val))
     logger.info(f"✅ Random Forest — Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
     return model, metrics
 
 
-def train_xgboost(X_train, y_train, X_val, y_val, n_estimators=100, max_depth=6, learning_rate=0.1, sample_weight=None):
+def train_xgboost(X_train, y_train, X_val, y_val,
+                  n_estimators=300, max_depth=4,
+                  learning_rate=0.05, sample_weight=None):
     logger.info("Training XGBoost...")
     model = xgb.XGBRegressor(
-        n_estimators=n_estimators, max_depth=max_depth,
-        learning_rate=learning_rate, random_state=42, n_jobs=-1
+        n_estimators=n_estimators,
+        max_depth=4,               # was 6 — shallower = less overfit
+        learning_rate=0.05,        # was 0.1 — slower learning, more stable
+        subsample=0.8,             # train each tree on 80% of rows
+        colsample_bytree=0.7,      # use 70% of features per tree
+        reg_alpha=0.1,             # L1 regularization
+        reg_lambda=2.0,            # L2 regularization (was default 1.0)
+        min_child_weight=5,        # min samples in a leaf — prevents over-splitting
+        gamma=0.1,                 # min loss reduction required to split
+        early_stopping_rounds=20,  # stop if val doesn't improve for 20 rounds
+        random_state=42,
+        n_jobs=-1
     )
-    model.fit(X_train, y_train, sample_weight=sample_weight, eval_set=[(X_val, y_val)], verbose=False)
+    model.fit(
+        X_train, y_train,
+        sample_weight=sample_weight,
+        eval_set=[(X_val, y_val)],
+        verbose=False
+    )
     metrics = _compute_metrics(y_train, model.predict(X_train), y_val, model.predict(X_val))
     logger.info(f"✅ XGBoost — Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
+    logger.info(f"   Best iteration : {model.best_iteration}")
     return model, metrics
 
 
