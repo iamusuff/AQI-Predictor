@@ -248,6 +248,34 @@ def get_recency_weights(n_samples: int, decay: float = 0.995) -> np.ndarray:
     weights = np.array([decay ** (n_samples - i) for i in range(n_samples)])
     return weights / weights.mean()
 
+def get_rolling_window_data(df: pd.DataFrame, window_days: int = 90) -> pd.DataFrame:
+    """
+    Returns only the most recent N days of data for training.
+    Prevents the model from being anchored to stale historical patterns.
+    """
+    if 'timestamp' not in df.columns:
+        logger.warning("⚠️  No timestamp column found — using full dataset")
+        return df
+    
+    cutoff = df['timestamp'].max() - pd.Timedelta(days=window_days)
+    df_windowed = df[df['timestamp'] >= cutoff].copy()
+    
+    logger.info(f"✅ Rolling window: {window_days} days")
+    logger.info(f"   Full dataset  : {len(df)} rows")
+    logger.info(f"   Windowed      : {len(df_windowed)} rows")
+    logger.info(f"   Cutoff date   : {cutoff.date()}")
+    logger.info(f"   From          : {df_windowed['timestamp'].min()}")
+    logger.info(f"   To            : {df_windowed['timestamp'].max()}")
+    
+    if len(df_windowed) < 100:
+        logger.warning(
+            f"⚠️  Only {len(df_windowed)} rows in window — "
+            f"falling back to full dataset (increase window_days)"
+        )
+        return df
+    
+    return df_windowed
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Model Training
 # ─────────────────────────────────────────────────────────────────────────────
