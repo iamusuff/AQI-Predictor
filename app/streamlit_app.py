@@ -287,11 +287,20 @@ def render_forecast():
     st.plotly_chart(fig, use_container_width=True)
 
     with st.expander("ℹ️ About the Forecast"):
-        st.markdown("""
-        - **Current**: Prediction based on latest AQI + weather features
-        - **24h / 48h / 72h**: Projected using trend scaling from current prediction
-        - **Confidence intervals**: 95% prediction intervals based on model RMSE
-        - **Model**: Ridge Regression (best performing model)
+        forecast_method = result.get('model_info', {}).get('forecast_method', 'Weather-informed')
+        st.markdown(f"""
+        **Forecasting Method:** {forecast_method}
+        
+        - **Current (t+0)**: Real-time prediction using latest AQICN pollutants + OpenMeteo weather
+        - **24h / 48h / 72h**: TRUE multi-horizon predictions using:
+          - OpenMeteo weather forecasts at target time
+          - Physics-based pollutant persistence (wind dispersion, humidity trapping, temperature effects)
+          - Model prediction with complete feature engineering for each horizon
+        - **Confidence intervals**: 95% prediction intervals based on model test RMSE
+          - Wider CIs for farther horizons (accounts for increasing uncertainty)
+        - **Model**: {model_info.get('name', 'Best model from Hopsworks Model Registry')}
+        
+        **NOT simple trend scaling** — each prediction uses the ML model independently!
         """)
 
 
@@ -378,7 +387,7 @@ def render_history():
 # ─────────────────────────────────────────────────────────────────────
 def render_shap():
     st.subheader("🎯 Feature Importance (SHAP)")
-    st.markdown("Global feature importance from SHAP analysis of the Ridge Regression model.")
+    st.markdown("Global feature importance from SHAP analysis of the trained model.")
 
     shap_dir = Path(NOTEBOOKS_DIR)
     png_files = sorted(shap_dir.glob("shap_*.png"))

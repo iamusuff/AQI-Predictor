@@ -1,0 +1,10 @@
+# System-level dependencies for Streamlit Cloud
+# These are installed via apt-get
+
+# Required for some scientific Python packages
+build-essential
+
+# Required for numpy/scipy compilation
+gfortran
+libopenblas-dev
+liblapack-dev

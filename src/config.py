@@ -1,25 +1,48 @@
 """
 Pearls AQI Predictor — Central Configuration
 Loads all environment variables and defines project-wide constants.
+Supports both local .env files and Streamlit Cloud secrets.
 """
 
 import os
 from dotenv import load_dotenv
 
-# Load .env file from project root
+# Load .env file from project root (for local development)
 load_dotenv()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper: Load from Streamlit Secrets or Environment Variables
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_secret(key: str, default: str = "") -> str:
+    """
+    Get secret from Streamlit Cloud secrets or environment variables.
+    Priority: Streamlit secrets > Environment variables > Default
+    """
+    try:
+        # Try Streamlit secrets first (when deployed on Streamlit Cloud)
+        import streamlit as st
+        if hasattr(st, 'secrets') and key in st.secrets:
+            return st.secrets[key]
+    except (ImportError, FileNotFoundError):
+        # Streamlit not available or secrets not configured
+        pass
+    
+    # Fall back to environment variables (local development)
+    return os.getenv(key, default)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # API Keys
 # ─────────────────────────────────────────────────────────────────────────────
-AQICN_API_KEY = os.getenv("AQICN_API_KEY", "")
+AQICN_API_KEY = get_secret("AQICN_API_KEY", "")
 # Note: OpenMeteo is free and requires no API key
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Hopsworks
 # ─────────────────────────────────────────────────────────────────────────────
-HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY", "")
-HOPSWORKS_PROJECT_NAME = os.getenv("HOPSWORKS_PROJECT_NAME", "aqi_predictor99")
+HOPSWORKS_API_KEY = get_secret("HOPSWORKS_API_KEY", "")
+HOPSWORKS_PROJECT_NAME = get_secret("HOPSWORKS_PROJECT_NAME", "aqi_predictor99")
 
 # Feature Store settings
 FEATURE_GROUP_NAME = "aqi_features"
@@ -34,15 +57,15 @@ MODEL_VERSION = 1
 # ─────────────────────────────────────────────────────────────────────────────
 # City Configuration
 # ─────────────────────────────────────────────────────────────────────────────
-CITY = os.getenv("CITY", "karachi")
+CITY = get_secret("CITY", "karachi")
 
 # Supported cities with coordinates and AQICN station IDs
 CITIES = {
     "karachi": {
         "name": "Karachi",
         "country": "Pakistan",
-        "lat": float(os.getenv("CITY_LAT", 24.8607)),
-        "lon": float(os.getenv("CITY_LON", 67.0011)),
+        "lat": float(get_secret("CITY_LAT", "24.8607")),
+        "lon": float(get_secret("CITY_LON", "67.0011")),
         "aqicn_station": "@11348",       # Karachi station ID on AQICN
         "timezone": "Asia/Karachi",
     },

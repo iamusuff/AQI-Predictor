@@ -529,6 +529,7 @@ def run(models_dir: str = "models") -> Dict:
         'predictions': predictions,
         'model_info': {
             'name':    metrics.get('model_name', MODEL_NAME),
+            'forecast_method': 'Weather-informed' if weather_forecasts else 'Persistence model',
             'metrics': {
                 'test_r2':   metrics.get('test_r2',   'N/A'),
                 'test_rmse': metrics.get('test_rmse', 'N/A'),
