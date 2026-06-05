@@ -507,4 +507,4 @@ elif page == "Model Info":
 
 # ── Footer ─────────────────────────────────────────────────────────
 st.markdown("---")
-st.caption("🌍 Pearls AQI Predictor | Data sources: AQICN + OpenWeatherMap | Model: Ridge Regression")
+st.caption("🌍 Pearls AQI Predictor | Data sources: AQICN + OpenMeteo | Powered by Hopsworks")

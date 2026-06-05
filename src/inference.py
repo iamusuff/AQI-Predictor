@@ -2,6 +2,15 @@
 Pearls AQI Predictor — Inference Module
 Load trained model from Hopsworks Model Registry and generate predictions for next 3 days.
 Designed to be called from Streamlit UI.
+
+Multi-Horizon Forecasting Strategy:
+  - Current (t+0): Use latest AQICN pollutants + OpenMeteo weather
+  - 24h (t+24): Use OpenMeteo weather forecast for tomorrow
+  - 48h (t+48): Use OpenMeteo weather forecast for day after tomorrow  
+  - 72h (t+72): Use OpenMeteo weather forecast for 3 days ahead
+  
+  Since we don't have future pollutant data, we apply trend-based decay/growth
+  based on current conditions and weather forecast.
 """
 
 import pandas as pd
@@ -16,8 +25,9 @@ from typing import Dict, List, Optional
 
 from utils import (
     fetch_aqicn_data,
-    fetch_openweather_data,
+    fetch_openmeteo_weather,
     compute_features,
+    compute_time_features,
 )
 
 from config import (
@@ -181,99 +191,241 @@ def get_aqi_category(aqi: float) -> Dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Prediction Engine
+# Future Weather Forecasting
+# ─────────────────────────────────────────────────────────────────────────────
+
+def fetch_future_weather_forecasts(lat: float, lon: float, days: int = 3) -> Dict[str, Dict]:
+    """
+    Fetch weather forecasts from OpenMeteo for the next N days.
+    
+    Returns:
+        {
+            '24h': {temperature, humidity, wind_speed, pressure, ...},
+            '48h': {temperature, humidity, wind_speed, pressure, ...},
+            '72h': {temperature, humidity, wind_speed, pressure, ...},
+        }
+    """
+    logger.info(f"Fetching {days}-day weather forecast from OpenMeteo...")
+    
+    from config import CITY_CONFIG
+    
+    # Get forecast data from OpenMeteo (next 7 days)
+    today = pd.Timestamp.utcnow().strftime('%Y-%m-%d')
+    end_date = (pd.Timestamp.utcnow() + timedelta(days=days)).strftime('%Y-%m-%d')
+    
+    forecast_df = fetch_openmeteo_weather(
+        lat=lat,
+        lon=lon,
+        start_date=today,
+        end_date=end_date,
+        is_forecast=True  # Will add this parameter to utils.py
+    )
+    
+    if forecast_df is None or forecast_df.empty:
+        logger.warning("⚠️  Weather forecast unavailable, using persistence model")
+        return None
+    
+    # Extract weather at 24h, 48h, 72h intervals
+    now = pd.Timestamp.utcnow()
+    forecasts = {}
+    
+    for horizon_hours in [24, 48, 72]:
+        target_time = now + timedelta(hours=horizon_hours)
+        
+        # Find closest forecast timestamp
+        forecast_df['timestamp'] = pd.to_datetime(forecast_df['timestamp'])
+        time_diffs = (forecast_df['timestamp'] - target_time).abs()
+        closest_idx = time_diffs.idxmin()
+        
+        forecast_row = forecast_df.loc[closest_idx]
+        forecasts[f'{horizon_hours}h'] = {
+            'temperature': float(forecast_row.get('temperature', 25)),
+            'humidity': int(forecast_row.get('humidity', 50)),
+            'wind_speed': float(forecast_row.get('wind_speed', 5)),
+            'pressure': int(forecast_row.get('pressure', 1013)),
+            'visibility': int(forecast_row.get('visibility', 10000)),
+            'clouds': int(forecast_row.get('clouds', 50)),
+        }
+        
+    logger.info(f"✅ Retrieved forecasts for 24h, 48h, 72h")
+    return forecasts
+
+
+def apply_pollutant_persistence_with_decay(current_pollutants: Dict, 
+                                           weather_forecast: Dict,
+                                           hours_ahead: int) -> Dict:
+    """
+    Predict future pollutant levels using persistence with meteorological decay.
+    
+    Strategy:
+    - PM2.5/PM10: Decay based on wind speed increase (dispersion)
+    - O3: Increases with temperature (photochemical reactions)
+    - NO2/SO2/CO: Slow decay (assuming reduced emissions overnight)
+    
+    Args:
+        current_pollutants: Current pollutant levels (pm25, pm10, o3, etc.)
+        weather_forecast: Forecasted weather at target horizon
+        hours_ahead: 24, 48, or 72
+        
+    Returns:
+        Predicted pollutant dict
+    """
+    # Base decay factor increases with time
+    base_decay = 1.0 - (0.02 * (hours_ahead / 24))  # 2% per day
+    
+    # Wind speed effect (stronger wind = more dispersion)
+    wind_speed = weather_forecast.get('wind_speed', 5)
+    wind_factor = 1.0 - (min(wind_speed, 15) / 100)  # Up to 15% reduction
+    
+    # Temperature effect on ozone
+    temp = weather_forecast.get('temperature', 25)
+    temp_factor = 1.0 + ((temp - 25) / 200)  # Warmer = more O3
+    
+    # Humidity effect (high humidity traps pollutants)
+    humidity = weather_forecast.get('humidity', 50)
+    humidity_factor = 1.0 + ((humidity - 50) / 300)
+    
+    predicted = {}
+    
+    # Particulate matter (affected by wind and humidity)
+    for pm in ['pm25', 'pm10']:
+        val = current_pollutants.get(pm, 0)
+        predicted[pm] = max(0, val * base_decay * wind_factor * humidity_factor)
+    
+    # Ozone (affected by temperature)
+    predicted['o3'] = max(0, current_pollutants.get('o3', 0) * base_decay * temp_factor)
+    
+    # Other gases (slow decay)
+    for gas in ['no2', 'so2', 'co']:
+        val = current_pollutants.get(gas, 0)
+        predicted[gas] = max(0, val * base_decay * 0.95)
+    
+    return predicted
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Prediction Engine (Multi-Horizon True Forecasting)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def predict_next_3_days(
     model,
     scaler,
-    current_features: np.ndarray,
+    feature_names: List[str],
     current_data: Dict,
+    weather_forecasts: Optional[Dict] = None,
     test_rmse: Optional[float] = None
 ) -> Dict:
     """
-    Generate predictions for current, 24h, 48h, and 72h horizons.
-
-    Confidence intervals use:  prediction ± 1.96 × RMSE × horizon_factor
-    Horizon factors: current=1.0, 24h=1.15, 48h=1.25, 72h=1.40
+    Generate TRUE multi-horizon predictions for current, 24h, 48h, and 72h.
+    
+    Each prediction uses:
+    - Current pollutants (with persistence + meteorological decay)
+    - Weather forecast at target horizon (from OpenMeteo)
+    - Time features for target timestamp
+    
+    This is NOT simple trend scaling — each horizon gets its own model prediction
+    with proper feature engineering.
 
     Args:
-        model            : Trained sklearn/xgb/lgb/catboost model
-        scaler           : Fitted StandardScaler
-        current_features : (1, n_features) array
-        current_data     : Raw feature dict (for trend modifiers)
-        test_rmse        : From model metrics — used for CI width
+        model             : Trained sklearn/xgb/lgb/catboost model
+        scaler            : Fitted StandardScaler
+        feature_names     : List of feature names in training order
+        current_data      : Current AQI + weather features dict
+        weather_forecasts : {24h: {...}, 48h: {...}, 72h: {...}} or None
+        test_rmse         : From model metrics — used for CI width
 
     Returns:
-        Dict with keys: current, 24h, 48h, 72h
+        Dict with keys: current, 24h, 48h, 72h (each with aqi, timestamp, CI, health)
     """
-    logger.info("Generating 3-day AQI forecast...")
+    logger.info("Generating TRUE multi-horizon 3-day AQI forecast...")
 
-    rmse   = test_rmse if test_rmse else 10.0
-    z      = 1.96  # 95% CI
-
-    # Scale and predict baseline
-    X_scaled    = scaler.transform(current_features)
-    base_aqi    = float(model.predict(X_scaled)[0])
-    base_aqi    = max(0, base_aqi)
-
-    # Simple trend modifiers based on current conditions
-    # These reflect typical AQI deterioration over time without future weather data
-    humidity    = float(current_data.get('humidity',    50))
-    wind_speed  = float(current_data.get('wind_speed',  5))
-
-    # High humidity and low wind = AQI tends to worsen
-    trend_factor = 1.0
-    if humidity > 70 and wind_speed < 3:
-        trend_factor = 1.08   # worse conditions expected
-    elif wind_speed > 10:
-        trend_factor = 0.97   # dispersion — slight improvement
-
-    aqi_24h = max(0, base_aqi * trend_factor * 1.03)
-    aqi_48h = max(0, base_aqi * trend_factor * 1.06)
-    aqi_72h = max(0, base_aqi * trend_factor * 1.10)
-
-    now = datetime.now()
-
-    predictions = {
-        'current': {
-            'aqi':       round(base_aqi, 1),
-            'timestamp': now.isoformat(),
-            'label':     'Now',
-            'confidence':'high',
-            'ci_lower':  round(max(0, base_aqi - z * rmse * 1.00), 1),
-            'ci_upper':  round(base_aqi + z * rmse * 1.00,         1),
-            'health':    get_aqi_category(base_aqi),
-        },
-        '24h': {
-            'aqi':       round(aqi_24h, 1),
-            'timestamp': (now + timedelta(hours=24)).isoformat(),
-            'label':     '+24 hours',
-            'confidence':'medium',
-            'ci_lower':  round(max(0, aqi_24h - z * rmse * 1.15), 1),
-            'ci_upper':  round(aqi_24h + z * rmse * 1.15,         1),
-            'health':    get_aqi_category(aqi_24h),
-        },
-        '48h': {
-            'aqi':       round(aqi_48h, 1),
-            'timestamp': (now + timedelta(hours=48)).isoformat(),
-            'label':     '+48 hours',
-            'confidence':'medium',
-            'ci_lower':  round(max(0, aqi_48h - z * rmse * 1.25), 1),
-            'ci_upper':  round(aqi_48h + z * rmse * 1.25,         1),
-            'health':    get_aqi_category(aqi_48h),
-        },
-        '72h': {
-            'aqi':       round(aqi_72h, 1),
-            'timestamp': (now + timedelta(hours=72)).isoformat(),
-            'label':     '+72 hours',
-            'confidence':'low',
-            'ci_lower':  round(max(0, aqi_72h - z * rmse * 1.40), 1),
-            'ci_upper':  round(aqi_72h + z * rmse * 1.40,         1),
-            'health':    get_aqi_category(aqi_72h),
-        },
+    rmse = test_rmse if test_rmse else 10.0
+    z    = 1.96  # 95% CI
+    now  = datetime.now()
+    
+    predictions = {}
+    
+    # ── Current (t+0) ─────────────────────────────────────────────────────────
+    X_current = prepare_inference_features(current_data, feature_names)
+    X_scaled  = scaler.transform(X_current)
+    aqi_current = float(model.predict(X_scaled)[0])
+    aqi_current = max(0, aqi_current)
+    
+    predictions['current'] = {
+        'aqi':        round(aqi_current, 1),
+        'timestamp':  now.isoformat(),
+        'label':      'Now',
+        'confidence': 'high',
+        'ci_lower':   round(max(0, aqi_current - z * rmse * 1.00), 1),
+        'ci_upper':   round(aqi_current + z * rmse * 1.00, 1),
+        'health':     get_aqi_category(aqi_current),
     }
+    
+    # ── Future Horizons (t+24, t+48, t+72) ────────────────────────────────────
+    for horizon_hours, label, conf_level, ci_factor in [
+        (24, '+24 hours', 'medium', 1.15),
+        (48, '+48 hours', 'medium', 1.25),
+        (72, '+72 hours', 'low',    1.40),
+    ]:
+        horizon_key = f'{horizon_hours}h'
+        target_time = now + timedelta(hours=horizon_hours)
+        
+        # Get weather forecast for this horizon
+        if weather_forecasts and horizon_key in weather_forecasts:
+            weather_future = weather_forecasts[horizon_key]
+        else:
+            # Fallback: use current weather (persistence model)
+            logger.warning(f"⚠️  No forecast for {horizon_key}, using current weather")
+            weather_future = {
+                'temperature': current_data.get('temperature', 25),
+                'humidity':    current_data.get('humidity', 50),
+                'wind_speed':  current_data.get('wind_speed', 5),
+                'pressure':    current_data.get('pressure', 1013),
+                'visibility':  current_data.get('visibility', 10000),
+                'clouds':      current_data.get('clouds', 50),
+            }
+        
+        # Predict future pollutants (persistence with meteorological decay)
+        pollutants_future = apply_pollutant_persistence_with_decay(
+            current_pollutants={
+                'pm25': current_data.get('pm25', 0),
+                'pm10': current_data.get('pm10', 0),
+                'o3':   current_data.get('o3', 0),
+                'no2':  current_data.get('no2', 0),
+                'so2':  current_data.get('so2', 0),
+                'co':   current_data.get('co', 0),
+            },
+            weather_forecast=weather_future,
+            hours_ahead=horizon_hours
+        )
+        
+        # Compute time features for future timestamp
+        time_features = compute_time_features(target_time)
+        
+        # Build complete feature dict for this horizon
+        future_data = {
+            **pollutants_future,
+            **weather_future,
+            **time_features,
+        }
+        
+        # Predict AQI using the model
+        X_future = prepare_inference_features(future_data, feature_names)
+        X_scaled_future = scaler.transform(X_future)
+        aqi_future = float(model.predict(X_scaled_future)[0])
+        aqi_future = max(0, aqi_future)
+        
+        predictions[horizon_key] = {
+            'aqi':        round(aqi_future, 1),
+            'timestamp':  target_time.isoformat(),
+            'label':      label,
+            'confidence': conf_level,
+            'ci_lower':   round(max(0, aqi_future - z * rmse * ci_factor), 1),
+            'ci_upper':   round(aqi_future + z * rmse * ci_factor, 1),
+            'health':     get_aqi_category(aqi_future),
+        }
 
+    # Log predictions
     for key, pred in predictions.items():
         logger.info(
             f"  {key:<8} AQI: {pred['aqi']:>6.1f}  "
@@ -294,10 +446,11 @@ def run(models_dir: str = "models") -> Dict:
 
     Steps:
         1. Load model from Hopsworks (fallback: local disk)
-        2. Fetch live AQI + weather data
-        3. Compute features
-        4. Generate predictions for current / 24h / 48h / 72h
-        5. Return structured response dict
+        2. Fetch live AQI + weather data (current)
+        3. Fetch weather forecasts for next 3 days (OpenMeteo)
+        4. Compute features for each horizon
+        5. Generate predictions for current / 24h / 48h / 72h using the model
+        6. Return structured response dict
 
     Args:
         models_dir: Local fallback directory if Hopsworks is unavailable
@@ -315,29 +468,61 @@ def run(models_dir: str = "models") -> Dict:
     logger.info("=" * 70)
 
     # ── Step 1: Load model ────────────────────────────────────────────────────
-    logger.info("\n[1/4] Loading model...")
+    logger.info("\n[1/5] Loading model from Hopsworks Model Registry...")
     model, scaler, feature_names, metrics = load_model(models_dir)
 
-    # ── Step 2: Fetch live data ───────────────────────────────────────────────
-    logger.info("\n[2/4] Fetching live AQI and weather data...")
+    # ── Step 2: Fetch current live data ───────────────────────────────────────
+    logger.info("\n[2/5] Fetching current AQI and weather data...")
 
     aqi_data = fetch_aqicn_data()
     if aqi_data is None:
         raise ValueError("❌ Failed to fetch AQI data from AQICN")
 
-    weather_data = fetch_openweather_data()
-    if weather_data is None:
-        raise ValueError("❌ Failed to fetch weather data from OpenWeather")
+    # Fetch current weather from OpenMeteo
+    from config import CITY_CONFIG
+    today = pd.Timestamp.utcnow().strftime('%Y-%m-%d')
+    weather_df = fetch_openmeteo_weather(
+        lat=CITY_CONFIG['lat'],
+        lon=CITY_CONFIG['lon'],
+        start_date=today,
+        end_date=today
+    )
+    
+    if weather_df is None or weather_df.empty:
+        raise ValueError("❌ Failed to fetch weather data from OpenMeteo")
+    
+    # Extract latest weather record
+    weather_data = weather_df.iloc[-1].to_dict()
+    logger.info(f"✅ Current — AQI: {aqi_data['aqi']}, Temp: {weather_data.get('temperature')}°C")
 
-    # ── Step 3: Compute features ──────────────────────────────────────────────
-    logger.info("\n[3/4] Computing features...")
-    current_data  = compute_features(aqi_data, weather_data)
-    X_current     = prepare_inference_features(current_data, feature_names)
+    # ── Step 3: Fetch weather forecasts ───────────────────────────────────────
+    logger.info("\n[3/5] Fetching 3-day weather forecast from OpenMeteo...")
+    weather_forecasts = fetch_future_weather_forecasts(
+        lat=CITY_CONFIG['lat'],
+        lon=CITY_CONFIG['lon'],
+        days=3
+    )
+    
+    if weather_forecasts:
+        logger.info(f"✅ Weather forecasts retrieved for 24h, 48h, 72h")
+    else:
+        logger.warning("⚠️  Weather forecasts unavailable — using persistence model")
 
-    # ── Step 4: Predict ───────────────────────────────────────────────────────
-    logger.info("\n[4/4] Generating predictions...")
+    # ── Step 4: Compute current features ──────────────────────────────────────
+    logger.info("\n[4/5] Computing features...")
+    current_data = compute_features(aqi_data, weather_data)
+
+    # ── Step 5: Generate multi-horizon predictions ────────────────────────────
+    logger.info("\n[5/5] Generating TRUE multi-horizon predictions...")
     test_rmse    = metrics.get('test_rmse', None)
-    predictions  = predict_next_3_days(model, scaler, X_current, current_data, test_rmse)
+    predictions  = predict_next_3_days(
+        model=model,
+        scaler=scaler,
+        feature_names=feature_names,
+        current_data=current_data,
+        weather_forecasts=weather_forecasts,
+        test_rmse=test_rmse
+    )
 
     # ── Build response ────────────────────────────────────────────────────────
     response = {
@@ -346,9 +531,10 @@ def run(models_dir: str = "models") -> Dict:
             'name':    metrics.get('model_name', MODEL_NAME),
             'metrics': {
                 'test_r2':   metrics.get('test_r2',   'N/A'),
-                'test_rmse': metrics.get('test_rmse',  'N/A'),
+                'test_rmse': metrics.get('test_rmse', 'N/A'),
+                'test_mae':  metrics.get('test_mae',  'N/A'),
                 'val_r2':    metrics.get('val_r2',    'N/A'),
-                'val_rmse':  metrics.get('val_rmse',   'N/A'),
+                'val_rmse':  metrics.get('val_rmse',  'N/A'),
             },
         },
         'current_conditions': {
@@ -374,6 +560,7 @@ def run(models_dir: str = "models") -> Dict:
     logger.info(f"  Category    : {predictions['current']['health']['category']}")
     logger.info(f"  Model       : {response['model_info']['name']}")
     logger.info(f"  Test R²     : {metrics.get('test_r2', 'N/A')}")
+    logger.info(f"  Forecast    : {'Weather-informed' if weather_forecasts else 'Persistence model'}")
     logger.info("=" * 70)
 
     return response

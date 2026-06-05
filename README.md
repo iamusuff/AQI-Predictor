@@ -6,8 +6,8 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Features:**
-- ⏰ Automated hourly data collection from AQICN & OpenWeather APIs
-- 🔄 Daily model retraining with multiple ML algorithms (Ridge, Random Forest, XGBoost, LSTM, GRU)
+- ⏰ Automated hourly data collection from AQICN & OpenMeteo APIs (free!)
+- 🔄 Daily model retraining with multiple ML algorithms (LightGBM, CatBoost, XGBoost, Random Forest)
 - 📊 Interactive Streamlit dashboard with 3-day forecasts
 - 🎯 SHAP-based explainability for predictions
 - 🚨 Real-time health alerts for hazardous AQI levels
@@ -16,8 +16,8 @@
 
 ```
 ┌─────────────────┐
-│  AQICN API      │  Pollutants: PM2.5, PM10, O3, NO2, SO2, CO
-│  OpenWeather API│  Weather: temp, humidity, wind, pressure
+│  AQICN API      │  Pollutants: PM2.5, PM10, O3, NO2, SO2, CO (real-time)
+│  OpenMeteo API  │  Weather: temp, humidity, wind, pressure (current + forecast)
 └────────┬────────┘
          │ raw data (hourly via GitHub Actions)
          ▼
@@ -97,7 +97,7 @@ copy .env.example .env
 ```
 Sign up for:
 - **AQICN token** → https://aqicn.org/data-platform/token/
-- **OpenWeatherMap key** → https://openweathermap.org/api
+- **OpenMeteo** → FREE, no API key required! https://open-meteo.com/
 - **Hopsworks account** → https://app.hopsworks.ai/
 
 ### 4. Validate configuration
@@ -122,13 +122,13 @@ streamlit run app/streamlit_app.py
 
 | Layer | Tool |
 |-------|------|
-| Data APIs | AQICN, OpenWeatherMap |
+| Data APIs | AQICN (pollutants), OpenMeteo (weather + forecasts) |
 | Feature Store | Hopsworks |
-| ML Models | Scikit-learn, XGBoost, TensorFlow |
+| ML Models | LightGBM, CatBoost, XGBoost, Random Forest, (LSTM, GRU) |
 | Explainability | SHAP |
 | CI/CD | GitHub Actions |
 | Dashboard | Streamlit |
-| API | Flask |
+| API | Flask (planned) |
 
 ## AQI Scale
 
@@ -191,6 +191,6 @@ This project is part of the Pearls AQI Predictor initiative.
 ## 🙏 Acknowledgments
 
 - [AQICN](https://aqicn.org/) for real-time air quality data
-- [OpenWeatherMap](https://openweathermap.org/) for weather data
+- [OpenMeteo](https://open-meteo.com/) for free weather data and forecasts
 - [Hopsworks](https://www.hopsworks.ai/) for feature store & model registry
 - US EPA for AQI calculation standards

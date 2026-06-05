@@ -13,7 +13,7 @@ load_dotenv()
 # API Keys
 # ─────────────────────────────────────────────────────────────────────────────
 AQICN_API_KEY = os.getenv("AQICN_API_KEY", "")
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+# Note: OpenMeteo is free and requires no API key
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Hopsworks
@@ -72,9 +72,10 @@ CITY_CONFIG = CITIES.get(CITY, CITIES["karachi"])
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Pollutant columns fetched from APIs
+# Pollutant columns fetched from APIs
 POLLUTANT_COLUMNS = ["pm25", "pm10", "o3", "no2", "so2", "co"]
 
-# Weather columns fetched from OpenWeather
+# Weather columns fetched from OpenMeteo
 WEATHER_COLUMNS = ["temperature", "humidity", "wind_speed", "pressure", "visibility"]
 
 # Rolling window sizes (in hours) for derived features
@@ -106,8 +107,7 @@ def validate_config() -> bool:
     missing = []
     if not AQICN_API_KEY:
         missing.append("AQICN_API_KEY")
-    if not OPENWEATHER_API_KEY:
-        missing.append("OPENWEATHER_API_KEY")
+    # OpenMeteo is free and requires no API key
     if not HOPSWORKS_API_KEY:
         missing.append("HOPSWORKS_API_KEY")
 

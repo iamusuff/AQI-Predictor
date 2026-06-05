@@ -12,7 +12,6 @@ import logging
 
 from config import (
     AQICN_API_KEY,
-    OPENWEATHER_API_KEY,
     CITY_CONFIG,
     POLLUTANT_COLUMNS,
     WEATHER_COLUMNS,
@@ -91,70 +90,6 @@ def fetch_aqicn_data(city_station: str = None) -> Optional[Dict]:
         
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to fetch AQICN data: {e}")
-        return None
-
-
-def fetch_openweather_data(lat: float = None, lon: float = None) -> Optional[Dict]:
-    """
-    Fetch current weather data from OpenWeatherMap API.
-    
-    Args:
-        lat: Latitude (if None, uses CITY_CONFIG['lat'])
-        lon: Longitude (if None, uses CITY_CONFIG['lon'])
-    
-    Returns:
-        Dictionary with weather data, or None if request fails
-        
-    Example response structure:
-        {
-            'temperature': 28.5,      # Celsius
-            'humidity': 65,           # Percentage
-            'wind_speed': 3.5,        # m/s
-            'pressure': 1013,         # hPa
-            'visibility': 10000,      # meters
-            'weather_main': 'Haze',
-            'weather_description': 'haze',
-            'clouds': 75,             # Percentage
-            'timestamp': '2024-01-15T10:00:00Z'
-        }
-    """
-    if lat is None:
-        lat = CITY_CONFIG['lat']
-    if lon is None:
-        lon = CITY_CONFIG['lon']
-    
-    url = "https://api.openweathermap.org/data/2.5/weather"
-    params = {
-        'lat': lat,
-        'lon': lon,
-        'appid': OPENWEATHER_API_KEY,
-        'units': 'metric'  # Celsius, m/s
-    }
-    
-    try:
-        logger.info(f"Fetching OpenWeather data for ({lat}, {lon})")
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        result = {
-            'temperature': data['main'].get('temp', None),
-            'humidity': data['main'].get('humidity', None),
-            'wind_speed': data['wind'].get('speed', None),
-            'pressure': data['main'].get('pressure', None),
-            'visibility': data.get('visibility', None),
-            'weather_main': data['weather'][0].get('main', None) if data.get('weather') else None,
-            'weather_description': data['weather'][0].get('description', None) if data.get('weather') else None,
-            'clouds': data['clouds'].get('all', None) if 'clouds' in data else None,
-            'timestamp': datetime.utcnow().isoformat(),
-        }
-        
-        logger.info(f"Successfully fetched OpenWeather data: Temp={result['temperature']}°C")
-        return result
-        
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to fetch OpenWeather data: {e}")
         return None
 
 
@@ -267,7 +202,7 @@ def compute_features(aqi_data: Dict, weather_data: Dict) -> Dict:
     
     Args:
         aqi_data: Dictionary from fetch_aqicn_data()
-        weather_data: Dictionary from fetch_openweather_data()
+        weather_data: Dictionary from fetch_openmeteo_weather() (single row/dict)
     
     Returns:
         Dictionary with all features ready for Feature Store
@@ -451,35 +386,56 @@ def validate_feature_data(features: Dict) -> Tuple[bool, str]:
 # OpenMeteo Historical Data (Free, No API Key Required)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def fetch_openmeteo_weather(lat: float, lon: float, start_date: str, end_date: str):
+def fetch_openmeteo_weather(lat: float, lon: float, start_date: str, end_date: str, is_forecast: bool = False):
     """
-    Fetch historical hourly weather data from OpenMeteo Archive API.
+    Fetch hourly weather data from OpenMeteo API.
+    
+    Can fetch both historical (archive) and forecast data:
+    - Historical: Uses archive-api.open-meteo.com (past data)
+    - Forecast: Uses api.open-meteo.com (future 7-day forecast)
+    
     Free tier, no API key required. 10,000 requests/day limit.
 
-    Docs: https://open-meteo.com/en/docs/historical-weather-api
+    Docs: 
+    - Historical: https://open-meteo.com/en/docs/historical-weather-api
+    - Forecast: https://open-meteo.com/en/docs
 
     Args:
         lat: Latitude
         lon: Longitude
         start_date: Start date YYYY-MM-DD
         end_date: End date YYYY-MM-DD
+        is_forecast: If True, fetch forecast data (future); if False, fetch historical
 
     Returns:
         DataFrame with columns: timestamp, temperature, humidity, wind_speed,
         pressure, visibility, clouds. Returns None on failure.
     """
-    url = "https://archive-api.open-meteo.com/v1/archive"
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "start_date": start_date,
-        "end_date": end_date,
-        "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m,pressure_msl,visibility,cloud_cover",
-        "timezone": "auto",
-    }
+    if is_forecast:
+        # Use forecast API for future data
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m,pressure_msl,visibility,cloud_cover",
+            "timezone": "auto",
+            "forecast_days": 7,  # Get 7-day forecast
+        }
+    else:
+        # Use archive API for historical data
+        url = "https://archive-api.open-meteo.com/v1/archive"
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "start_date": start_date,
+            "end_date": end_date,
+            "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m,pressure_msl,visibility,cloud_cover",
+            "timezone": "auto",
+        }
 
     try:
-        logger.info(f"Fetching OpenMeteo weather: {start_date} to {end_date}")
+        mode = "forecast" if is_forecast else "historical"
+        logger.info(f"Fetching OpenMeteo weather ({mode}): {start_date} to {end_date}")
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
@@ -495,11 +451,17 @@ def fetch_openmeteo_weather(lat: float, lon: float, start_date: str, end_date: s
             "clouds": hourly.get("cloud_cover", [0] * len(hourly["time"])),
         })
         
+        # For forecast, filter to the requested date range
+        if is_forecast:
+            start_dt = pd.to_datetime(start_date)
+            end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)  # Include end date
+            df = df[(df['timestamp'] >= start_dt) & (df['timestamp'] < end_dt)]
+        
         # Drop rows where all weather values are null
         weather_cols = ["temperature", "humidity", "wind_speed", "pressure"]
         df = df.dropna(subset=weather_cols, how="all")
 
-        logger.info(f"✅ OpenMeteo weather: {len(df)} hourly records")
+        logger.info(f"✅ OpenMeteo weather ({mode}): {len(df)} hourly records")
         return df
 
     except Exception as e:
@@ -574,12 +536,19 @@ if __name__ == "__main__":
     else:
         print("   ❌ Failed to fetch AQICN data")
     
-    print("\n2. Fetching OpenWeather data...")
-    weather_data = fetch_openweather_data()
-    if weather_data:
+    print("\n2. Fetching OpenMeteo weather (current)...")
+    from datetime import timedelta
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    weather_df = fetch_openmeteo_weather(
+        CITY_CONFIG['lat'], CITY_CONFIG['lon'],
+        today, today
+    )
+    if weather_df is not None and not weather_df.empty:
+        weather_data = weather_df.iloc[-1].to_dict()
         print(f"   ✅ Temp: {weather_data['temperature']}°C, Humidity: {weather_data['humidity']}%")
     else:
-        print("   ❌ Failed to fetch OpenWeather data")
+        print("   ❌ Failed to fetch OpenMeteo weather")
+        weather_data = None
     
     if aqi_data and weather_data:
         print("\n3. Computing features...")
@@ -594,7 +563,6 @@ if __name__ == "__main__":
             print(f"   ❌ Validation error: {error}")
     
     print("\n5. Testing OpenMeteo historical APIs (free)...")
-    from datetime import timedelta
     end = datetime.utcnow()
     start = end - timedelta(days=3)
     om_weather = fetch_openmeteo_weather(
@@ -614,3 +582,4 @@ if __name__ == "__main__":
         print(f"   ✅ OpenMeteo AQI: {len(om_aqi)} rows")
     else:
         print("   ❌ OpenMeteo AQI failed")
+
