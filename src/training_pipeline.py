@@ -2,7 +2,7 @@
 Pearls AQI Predictor — Training Pipeline
 Train multiple ML models, evaluate them, and register the best one.
 
-Models: Ridge Regression, Random Forest, XGBoost, LSTM, GRU
+Models: LightGBM, CatBoost, XGBoost, Random Forest
 
 Data Source: Hopsworks Feature Store (falls back to local CSV)
 Model Storage: Hopsworks Model Registry
@@ -20,10 +20,11 @@ import json
 # ML libraries
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import xgboost as xgb
+import lightgbm as lgb
+from catboost import CatBoostRegressor
 
 # Deep learning (optional)
 try:
@@ -54,7 +55,7 @@ from config import (
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Hopsworks Connection (mirrors working feature_pipeline.py exactly)
+# Hopsworks Connection
 # ─────────────────────────────────────────────────────────────────────────────
 
 def connect_to_hopsworks():
@@ -89,7 +90,6 @@ def clean_hopsworks_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     Fix stringified array values returned by Hopsworks fg.read()
     e.g. '[1.4101299E2]' → 142.01
     """
-
     float_cols = ['o3', 'no2', 'so2', 'co', 'temperature', 'wind_speed']
     int_cols   = [
         'aqi', 'pm25', 'pm10',
@@ -98,17 +98,15 @@ def clean_hopsworks_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         'season', 'is_weekend',
     ]
 
-    # ── Float columns ─────────────────────────────────────────────────────────
     for col in float_cols:
         if col in df.columns:
             df[col] = (
                 df[col].astype(str)
-                       .str.replace(r'[\[\]]', '', regex=True)  # strip [ ]
+                       .str.replace(r'[\[\]]', '', regex=True)
                        .str.strip()
             )
             df[col] = pd.to_numeric(df[col], errors='coerce').astype('float64')
 
-    # ── Int columns ───────────────────────────────────────────────────────────
     for col in int_cols:
         if col in df.columns:
             df[col] = (
@@ -120,11 +118,8 @@ def clean_hopsworks_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
 def load_data_from_hopsworks(feature_store) -> pd.DataFrame:
-    """
-    Load training data from Hopsworks Feature Store.
-    Uses the same feature group registered by feature_pipeline.py.
-    """
     logger.info(f"Loading data from Hopsworks Feature Store ({FEATURE_GROUP_NAME} v{FEATURE_GROUP_VERSION})...")
 
     try:
@@ -134,15 +129,13 @@ def load_data_from_hopsworks(feature_store) -> pd.DataFrame:
         )
         df = fg.read()
 
-        # ── Print sample record to verify types ──────────────────────────────────
         logger.info("Sample record (first row) with dtypes:")
         sample = df.iloc[0]
         for col, val in sample.items():
             logger.info(f"  {col:<20} dtype={df[col].dtype!s:<12} val={val}")
-        
-        df = clean_hopsworks_dataframe(df)   # ← fix before anything else touches df
-        logger.info(f"✅ Dtypes after clean:\n{df.dtypes.to_string()}")
 
+        df = clean_hopsworks_dataframe(df)
+        logger.info(f"✅ Dtypes after clean:\n{df.dtypes.to_string()}")
         logger.info(f"✅ Loaded {len(df)} rows from Hopsworks Feature Store")
         return df
     except Exception as e:
@@ -151,7 +144,6 @@ def load_data_from_hopsworks(feature_store) -> pd.DataFrame:
 
 
 def load_data_from_csv(filepath: str = "data/features.csv") -> pd.DataFrame:
-    """Fallback: load training data from local CSV."""
     logger.info(f"Loading data from local CSV: {filepath}...")
     try:
         df = pd.read_csv(filepath, parse_dates=['timestamp'])
@@ -163,9 +155,7 @@ def load_data_from_csv(filepath: str = "data/features.csv") -> pd.DataFrame:
 
 
 def load_data(filepath: str = "data/features.csv") -> pd.DataFrame:
-    """
-    Load data — tries Hopsworks first, falls back to local CSV.
-    """
+    """Load data — tries Hopsworks first, falls back to local CSV."""
     project, feature_store = connect_to_hopsworks()
 
     if feature_store is not None:
@@ -184,14 +174,12 @@ def load_data(filepath: str = "data/features.csv") -> pd.DataFrame:
 def prepare_features_and_target(df: pd.DataFrame, target_col: str = 'aqi'):
     logger.info("Preparing features and target...")
 
-    # ── Strip timezone from timestamp before exclusion ────────────────────────
     if 'timestamp' in df.columns:
         df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize(None)
 
     exclude_cols = ['timestamp', 'aqi', 'dominentpol', 'weather_main', 'weather_description']
     feature_cols = [col for col in df.columns if col not in exclude_cols]
 
-    # ── Catch any object columns that slipped through clean ───────────────────
     for col in feature_cols:
         if df[col].dtype == object:
             logger.warning(f"⚠️  Object dtype still present in '{col}' — forcing numeric")
@@ -202,11 +190,10 @@ def prepare_features_and_target(df: pd.DataFrame, target_col: str = 'aqi'):
             )
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-    # ── Force entire array to float64 — SHAP and scaler both require this ─────
     X = df[feature_cols].values.astype(np.float64)
     y = df[target_col].values.astype(np.float64)
 
-    logger.info(f"✅ X dtype  : {X.dtype}  shape: {X.shape}")   # must say float64
+    logger.info(f"✅ X dtype  : {X.dtype}  shape: {X.shape}")
     logger.info(f"✅ y dtype  : {y.dtype}")
     logger.info(f"✅ Features : {feature_cols}")
 
@@ -214,9 +201,7 @@ def prepare_features_and_target(df: pd.DataFrame, target_col: str = 'aqi'):
 
 
 def split_data(X, y, test_size=0.15, val_size=0.15):
-    """
-    Split data into train/validation/test sets (temporal order preserved).
-    """
+    """Split data into train/validation/test sets (temporal order preserved)."""
     logger.info("Splitting data (temporal order preserved)...")
 
     n_samples = len(X)
@@ -243,10 +228,12 @@ def scale_features(X_train, X_val, X_test):
     logger.info("✅ Features scaled (StandardScaler)")
     return X_train_scaled, X_val_scaled, X_test_scaled, scaler
 
+
 def get_recency_weights(n_samples: int, decay: float = 0.995) -> np.ndarray:
     """Exponential decay: most recent samples have weight ~1.0, oldest ~decay^n"""
     weights = np.array([decay ** (n_samples - i) for i in range(n_samples)])
     return weights / weights.mean()
+
 
 def get_rolling_window_data(df: pd.DataFrame, window_days: int = 90) -> pd.DataFrame:
     """
@@ -256,25 +243,26 @@ def get_rolling_window_data(df: pd.DataFrame, window_days: int = 90) -> pd.DataF
     if 'timestamp' not in df.columns:
         logger.warning("⚠️  No timestamp column found — using full dataset")
         return df
-    
+
     cutoff = df['timestamp'].max() - pd.Timedelta(days=window_days)
     df_windowed = df[df['timestamp'] >= cutoff].copy()
-    
-    logger.info(f"✅ Rolling window: {window_days} days")
-    logger.info(f"   Full dataset  : {len(df)} rows")
-    logger.info(f"   Windowed      : {len(df_windowed)} rows")
-    logger.info(f"   Cutoff date   : {cutoff.date()}")
-    logger.info(f"   From          : {df_windowed['timestamp'].min()}")
-    logger.info(f"   To            : {df_windowed['timestamp'].max()}")
-    
+
+    logger.info(f"✅ Rolling window : {window_days} days")
+    logger.info(f"   Full dataset   : {len(df)} rows")
+    logger.info(f"   Windowed       : {len(df_windowed)} rows")
+    logger.info(f"   Cutoff date    : {cutoff.date()}")
+    logger.info(f"   From           : {df_windowed['timestamp'].min()}")
+    logger.info(f"   To             : {df_windowed['timestamp'].max()}")
+
     if len(df_windowed) < 100:
         logger.warning(
             f"⚠️  Only {len(df_windowed)} rows in window — "
             f"falling back to full dataset (increase window_days)"
         )
         return df
-    
+
     return df_windowed
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Model Training
@@ -291,17 +279,59 @@ def _compute_metrics(y_true_train, y_pred_train, y_true_val, y_pred_val) -> dict
     }
 
 
-def train_ridge_regression(X_train, y_train, X_val, y_val, alpha=1.0):
-    logger.info("Training Ridge Regression...")
-    from sklearn.linear_model import RidgeCV
-    model = RidgeCV(
-        alphas=[0.1, 1.0, 10.0, 100.0, 1000.0],
-        cv=5                       # auto-picks best alpha via cross-validation
+def train_lightgbm(X_train, y_train, X_val, y_val, sample_weight=None):
+    logger.info("Training LightGBM...")
+    model = lgb.LGBMRegressor(
+        n_estimators=300,
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.7,
+        reg_alpha=0.1,
+        reg_lambda=2.0,
+        min_child_samples=20,      # min samples in a leaf
+        num_leaves=31,             # controls tree complexity
+        random_state=42,
+        n_jobs=-1,
+        verbose=-1                 # suppress LightGBM logs
     )
-    model.fit(X_train, y_train)
-    logger.info(f"   Best alpha: {model.alpha_}")
+    model.fit(
+        X_train, y_train,
+        sample_weight=sample_weight,
+        eval_set=[(X_val, y_val)],
+        callbacks=[
+            lgb.early_stopping(20, verbose=False),
+            lgb.log_evaluation(period=-1)
+        ]
+    )
     metrics = _compute_metrics(y_train, model.predict(X_train), y_val, model.predict(X_val))
-    logger.info(f"✅ Ridge — Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
+    logger.info(f"✅ LightGBM — Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
+    logger.info(f"   Best iteration : {model.best_iteration_}")
+    return model, metrics
+
+
+def train_catboost(X_train, y_train, X_val, y_val, sample_weight=None):
+    logger.info("Training CatBoost...")
+    model = CatBoostRegressor(
+        iterations=300,
+        depth=4,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bylevel=0.7,
+        reg_lambda=2.0,
+        min_data_in_leaf=5,
+        random_seed=42,
+        verbose=0                  # suppress CatBoost logs
+    )
+    model.fit(
+        X_train, y_train,
+        sample_weight=sample_weight,
+        eval_set=(X_val, y_val),
+        early_stopping_rounds=20
+    )
+    metrics = _compute_metrics(y_train, model.predict(X_train), y_val, model.predict(X_val))
+    logger.info(f"✅ CatBoost — Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
+    logger.info(f"   Best iteration : {model.best_iteration_}")
     return model, metrics
 
 
@@ -311,11 +341,11 @@ def train_random_forest(X_train, y_train, X_val, y_val,
     logger.info("Training Random Forest...")
     model = RandomForestRegressor(
         n_estimators=n_estimators,
-        max_depth=12,            # was 20 — shallower trees generalize better
-        min_samples_split=10,    # need 10 samples to split a node
-        min_samples_leaf=5,      # smoother leaf predictions
-        max_features=0.7,        # use 70% of features per tree
-        max_samples=0.8,         # bagging: train each tree on 80% of rows
+        max_depth=12,
+        min_samples_split=10,
+        min_samples_leaf=5,
+        max_features=0.7,
+        max_samples=0.8,
         random_state=42,
         n_jobs=-1
     )
@@ -331,15 +361,15 @@ def train_xgboost(X_train, y_train, X_val, y_val,
     logger.info("Training XGBoost...")
     model = xgb.XGBRegressor(
         n_estimators=n_estimators,
-        max_depth=4,               # was 6 — shallower = less overfit
-        learning_rate=0.05,        # was 0.1 — slower learning, more stable
-        subsample=0.8,             # train each tree on 80% of rows
-        colsample_bytree=0.7,      # use 70% of features per tree
-        reg_alpha=0.1,             # L1 regularization
-        reg_lambda=2.0,            # L2 regularization (was default 1.0)
-        min_child_weight=5,        # min samples in a leaf — prevents over-splitting
-        gamma=0.1,                 # min loss reduction required to split
-        early_stopping_rounds=20,  # stop if val doesn't improve for 20 rounds
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.7,
+        reg_alpha=0.1,
+        reg_lambda=2.0,
+        min_child_weight=5,
+        gamma=0.1,
+        early_stopping_rounds=20,
         random_state=42,
         n_jobs=-1
     )
@@ -467,27 +497,17 @@ def compute_shap_importance(model, X_train_scaled, feature_names, model_name: st
         import shap
         logger.info("Computing SHAP feature importance...")
 
-        # ── Debug input ───────────────────────────────────────────────────────
         logger.info(f"  X_train_scaled dtype  : {X_train_scaled.dtype}")
         logger.info(f"  X_train_scaled shape  : {X_train_scaled.shape}")
         logger.info(f"  Any NaN               : {np.isnan(X_train_scaled).any()}")
         logger.info(f"  Any Inf               : {np.isinf(X_train_scaled).any()}")
         logger.info(f"  model_name            : {model_name}")
         logger.info(f"  SHAP version          : {shap.__version__}")
-        if model_name == "XGBoost":
-            logger.info(f"  XGBoost version       : {xgb.__version__}")
 
-        # ── Force float64 once ────────────────────────────────────────────────
         sample = np.asarray(X_train_scaled[:500], dtype=np.float64)
-        logger.info(f"  Sample dtype after cast : {sample.dtype}")
-        logger.info(f"  Sample shape            : {sample.shape}")
 
-        # ── Build explainer ───────────────────────────────────────────────────
-        if model_name == "XGBoost":
-            logger.info("  Building TreeExplainer with model.get_booster()...")
-            explainer = shap.TreeExplainer(model)
-        elif model_name == "Random Forest":
-            logger.info("  Building TreeExplainer for Random Forest...")
+        if model_name in ("XGBoost", "Random Forest", "LightGBM", "CatBoost"):
+            logger.info(f"  Building TreeExplainer for {model_name}...")
             explainer = shap.TreeExplainer(model)
         else:
             logger.info(f"  Building LinearExplainer for {model_name}...")
@@ -495,12 +515,10 @@ def compute_shap_importance(model, X_train_scaled, feature_names, model_name: st
 
         logger.info("  Running explainer.shap_values()...")
         shap_values = explainer.shap_values(sample)
-        logger.info(f"  shap_values type  : {type(shap_values)}")
-        logger.info(f"  shap_values shape : {np.array(shap_values).shape}")
 
         importance_df = pd.DataFrame({
-            'feature':          feature_names,
-            'shap_importance':  np.abs(shap_values).mean(axis=0),
+            'feature':         feature_names,
+            'shap_importance': np.abs(shap_values).mean(axis=0),
         }).sort_values('shap_importance', ascending=False)
 
         os.makedirs("models", exist_ok=True)
@@ -588,11 +606,7 @@ def save_model_locally(model, scaler, feature_names, metrics, model_name: str,
 
 
 def register_model_in_hopsworks(model, scaler, feature_names, metrics, model_name: str) -> bool:
-    """
-    Register the best model in Hopsworks Model Registry.
-    Saves artifacts locally first, then uploads the folder — mirrors
-    the pattern used in the working feature_pipeline.py.
-    """
+    """Register the best model in Hopsworks Model Registry."""
     try:
         import hopsworks
 
@@ -605,7 +619,6 @@ def register_model_in_hopsworks(model, scaler, feature_names, metrics, model_nam
 
         mr = project.get_model_registry()
 
-        # ── Save artifacts to a local staging folder ──────────────────────────
         artifact_dir = "model_artifacts"
         os.makedirs(artifact_dir, exist_ok=True)
 
@@ -618,7 +631,6 @@ def register_model_in_hopsworks(model, scaler, feature_names, metrics, model_nam
         with open(f"{artifact_dir}/metrics.json", "w") as f:
             json.dump(metrics, f, indent=2)
 
-        # ── Register and upload to Hopsworks ──────────────────────────────────
         hw_model = mr.python.create_model(
             name=MODEL_NAME,
             description=f"AQI Predictor — {model_name}",
@@ -629,7 +641,7 @@ def register_model_in_hopsworks(model, scaler, feature_names, metrics, model_nam
                 "test_r2":   round(float(metrics.get("test_r2",   0)), 4),
             },
         )
-        hw_model.save(artifact_dir)   # uploads entire folder to registry
+        hw_model.save(artifact_dir)
 
         logger.info(f"✅ Model '{MODEL_NAME}' registered in Hopsworks Model Registry")
         return True
@@ -652,17 +664,16 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
     logger.info("TRAINING PIPELINE STARTED")
     logger.info("=" * 70)
 
-    # ── Step 1: Load data from Hopsworks (fallback to CSV) ────────────────────
+    # ── Step 1: Load data ─────────────────────────────────────────────────────
     logger.info("\n[1/8] Loading data...")
     df = load_data(filepath=data_path)
 
-    # Sort by timestamp — critical for temporal split correctness
     df = df.sort_values('timestamp').reset_index(drop=True)
-    logger.info(f"  Full date range: {df['timestamp'].min()} → {df['timestamp'].max()}")
+    logger.info(f"  Full date range : {df['timestamp'].min()} → {df['timestamp'].max()}")
 
-    # ── Rolling window: train only on recent data to reduce distribution shift ──
+    # ── Rolling window ────────────────────────────────────────────────────────
     df = get_rolling_window_data(df, window_days=window_days)
-    logger.info(f"  Windowed range : {df['timestamp'].min()} → {df['timestamp'].max()}")
+    logger.info(f"  Windowed range  : {df['timestamp'].min()} → {df['timestamp'].max()}")
 
     # ── Step 2: Prepare features and target ───────────────────────────────────
     logger.info("\n[2/8] Preparing features and target...")
@@ -678,45 +689,60 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
         X_train, X_val, X_test
     )
 
-    # ── Step 5: TimeSeries cross-validation (Ridge only for speed) ────────────
-    logger.info("\n[5/8] Time-Series Cross-Validation (3-fold, Ridge)...")
-    cv_results = {}
-    cv_results['Ridge Regression'] = cross_validate_model(train_ridge_regression, X, y)
+    # ── Step 5: Recency weights ───────────────────────────────────────────────
+    logger.info("\n[5/8] Computing recency weights...")
+    sample_weights = get_recency_weights(len(X_train_scaled))
 
     # ── Step 6: Train all models ──────────────────────────────────────────────
     logger.info("\n[6/8] Training models...")
     results = {}
 
-    # 1. Ridge Regression
-    logger.info("\n  [1/5] Ridge Regression")
-    sample_weights = get_recency_weights(len(X_train_scaled))
-    ridge_model, ridge_metrics = train_ridge_regression(X_train_scaled, y_train, X_val_scaled, y_val)
-    results['Ridge Regression'] = {
-        'model':        ridge_model,
-        'metrics':      {**ridge_metrics, **cv_results.get('Ridge Regression', {})},
-        'test_metrics': evaluate_model(ridge_model, X_test_scaled, y_test, "Ridge Regression"),
+    # 1. LightGBM
+    logger.info("\n  [1/4] LightGBM")
+    lgb_model, lgb_metrics = train_lightgbm(
+        X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights
+    )
+    results['LightGBM'] = {
+        'model':        lgb_model,
+        'metrics':      lgb_metrics,
+        'test_metrics': evaluate_model(lgb_model, X_test_scaled, y_test, "LightGBM"),
     }
 
-    # 2. Random Forest
-    logger.info("\n  [2/5] Random Forest")
-    rf_model, rf_metrics = train_random_forest(X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights)
+    # 2. CatBoost
+    logger.info("\n  [2/4] CatBoost")
+    cat_model, cat_metrics = train_catboost(
+        X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights
+    )
+    results['CatBoost'] = {
+        'model':        cat_model,
+        'metrics':      cat_metrics,
+        'test_metrics': evaluate_model(cat_model, X_test_scaled, y_test, "CatBoost"),
+    }
+
+    # 3. Random Forest
+    logger.info("\n  [3/4] Random Forest")
+    rf_model, rf_metrics = train_random_forest(
+        X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights
+    )
     results['Random Forest'] = {
         'model':        rf_model,
         'metrics':      rf_metrics,
         'test_metrics': evaluate_model(rf_model, X_test_scaled, y_test, "Random Forest"),
     }
 
-    # 3. XGBoost
-    logger.info("\n  [3/5] XGBoost")
-    xgb_model, xgb_metrics = train_xgboost(X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights)
+    # 4. XGBoost
+    logger.info("\n  [4/4] XGBoost")
+    xgb_model, xgb_metrics = train_xgboost(
+        X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights
+    )
     results['XGBoost'] = {
         'model':        xgb_model,
         'metrics':      xgb_metrics,
         'test_metrics': evaluate_model(xgb_model, X_test_scaled, y_test, "XGBoost"),
     }
 
-    # 4 & 5. LSTM / GRU (optional)
-    X_train_seq = X_val_seq = X_test_seq = None   # init for GRU reuse
+    # ── LSTM / GRU (optional) ─────────────────────────────────────────────────
+    X_train_seq = X_val_seq = X_test_seq = None
     y_train_seq = y_val_seq = y_test_seq = None
 
     if TF_AVAILABLE:
@@ -725,7 +751,7 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
         X_test_seq,  y_test_seq  = _prepare_sequences(X_test_scaled,  y_test)
 
         if X_train_seq is not None:
-            logger.info("\n  [4/5] LSTM")
+            logger.info("\n  [5/4] LSTM")
             lstm_model, lstm_metrics = train_lstm(X_train_seq, y_train_seq, X_val_seq, y_val_seq)
             if lstm_model is not None:
                 lstm_pred = lstm_model.predict(X_test_seq, verbose=0).flatten()
@@ -739,7 +765,7 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
                     },
                 }
 
-            logger.info("\n  [5/5] GRU")
+            logger.info("\n  [6/4] GRU")
             gru_model, gru_metrics = train_gru(X_train_seq, y_train_seq, X_val_seq, y_val_seq)
             if gru_model is not None:
                 gru_pred = gru_model.predict(X_test_seq, verbose=0).flatten()
@@ -767,7 +793,6 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
         **results[best_model_name]['test_metrics'],
     }
 
-    # ── SHAP feature importance ───────────────────────────────────────────────
     compute_shap_importance(best_model, X_train_scaled, feature_names, best_model_name)
 
     # ── Step 8: Save / register model ─────────────────────────────────────────
@@ -807,11 +832,11 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="AQI Training Pipeline")
-    parser.add_argument("--data",         type=str,  default="data/features.csv",
+    parser.add_argument("--data",          type=str, default="data/features.csv",
                         help="Path to local CSV (used only if Hopsworks fails)")
-    parser.add_argument("--no-save",      action="store_true", help="Don't save trained models locally")
-    parser.add_argument("--no-hopsworks", action="store_true", help="Skip Hopsworks model registry")
-    parser.add_argument("--window-days",  type=int,  default=90,
+    parser.add_argument("--no-save",       action="store_true", help="Don't save trained models locally")
+    parser.add_argument("--no-hopsworks",  action="store_true", help="Skip Hopsworks model registry")
+    parser.add_argument("--window-days",   type=int, default=90,
                         help="Rolling training window in days (default: 90)")
 
     args = parser.parse_args()
