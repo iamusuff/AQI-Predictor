@@ -243,6 +243,10 @@ def scale_features(X_train, X_val, X_test):
     logger.info("✅ Features scaled (StandardScaler)")
     return X_train_scaled, X_val_scaled, X_test_scaled, scaler
 
+def get_recency_weights(n_samples: int, decay: float = 0.995) -> np.ndarray:
+    """Exponential decay: most recent samples have weight ~1.0, oldest ~decay^n"""
+    weights = np.array([decay ** (n_samples - i) for i in range(n_samples)])
+    return weights / weights.mean()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Model Training
@@ -268,22 +272,22 @@ def train_ridge_regression(X_train, y_train, X_val, y_val, alpha=1.0):
     return model, metrics
 
 
-def train_random_forest(X_train, y_train, X_val, y_val, n_estimators=100, max_depth=20):
+def train_random_forest(X_train, y_train, X_val, y_val, n_estimators=100, max_depth=20, sample_weight=None):
     logger.info("Training Random Forest...")
     model = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, random_state=42, n_jobs=-1)
-    model.fit(X_train, y_train)
+    model.fit(X_train, y_train, sample_weight=sample_weight)
     metrics = _compute_metrics(y_train, model.predict(X_train), y_val, model.predict(X_val))
     logger.info(f"✅ Random Forest — Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
     return model, metrics
 
 
-def train_xgboost(X_train, y_train, X_val, y_val, n_estimators=100, max_depth=6, learning_rate=0.1):
+def train_xgboost(X_train, y_train, X_val, y_val, n_estimators=100, max_depth=6, learning_rate=0.1, sample_weight=None):
     logger.info("Training XGBoost...")
     model = xgb.XGBRegressor(
         n_estimators=n_estimators, max_depth=max_depth,
         learning_rate=learning_rate, random_state=42, n_jobs=-1
     )
-    model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
+    model.fit(X_train, y_train, sample_weight=sample_weight, eval_set=[(X_val, y_val)], verbose=False)
     metrics = _compute_metrics(y_train, model.predict(X_train), y_val, model.predict(X_val))
     logger.info(f"✅ XGBoost — Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
     return model, metrics
@@ -619,6 +623,7 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
 
     # 1. Ridge Regression
     logger.info("\n  [1/5] Ridge Regression")
+    sample_weights = get_recency_weights(len(X_train_scaled))
     ridge_model, ridge_metrics = train_ridge_regression(X_train_scaled, y_train, X_val_scaled, y_val)
     results['Ridge Regression'] = {
         'model':        ridge_model,
@@ -628,8 +633,7 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
 
     # 2. Random Forest
     logger.info("\n  [2/5] Random Forest")
-    rf_model, rf_metrics = train_random_forest(X_train_scaled, y_train, X_val_scaled, y_val)
-    results['Random Forest'] = {
+    rf_model, rf_metrics = train_random_forest(X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights)results['Random Forest'] = {
         'model':        rf_model,
         'metrics':      rf_metrics,
         'test_metrics': evaluate_model(rf_model, X_test_scaled, y_test, "Random Forest"),
@@ -637,7 +641,7 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
 
     # 3. XGBoost
     logger.info("\n  [3/5] XGBoost")
-    xgb_model, xgb_metrics = train_xgboost(X_train_scaled, y_train, X_val_scaled, y_val)
+    xgb_model, xgb_metrics = train_xgboost(X_train_scaled, y_train, X_val_scaled, y_val, sample_weight=sample_weights)
     results['XGBoost'] = {
         'model':        xgb_model,
         'metrics':      xgb_metrics,
