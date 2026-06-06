@@ -255,6 +255,7 @@ def render_forecast():
         return
 
     predictions = result["predictions"]
+    model_info = result["model_info"]          # ← add this line
     st.subheader("📊 Detailed 3-Day Forecast")
 
     rows = []
@@ -496,7 +497,7 @@ def render_model_info():
     shap_report = os.path.join(NOTEBOOKS_DIR, "shap_summary_report.txt")
     if os.path.exists(shap_report):
         with st.expander("📝 SHAP Summary Report", expanded=False):
-            with open(shap_report) as f:
+            with open(shap_report, encoding="utf-8", errors="replace") as f:
                 st.text(f.read())
 
 
