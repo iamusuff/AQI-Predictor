@@ -79,7 +79,7 @@ jobs:
           tag_name: shap-latest
           name: "Latest SHAP Importance"
           body: "Auto-updated on every model training run"
-          files: notebooks/shap_importance_file.csv   # ← update this path
+          files: models/shap_importance.csv   # ← update this path
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

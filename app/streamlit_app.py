@@ -25,7 +25,7 @@ GITHUB_ORG  = "iamusuff"
 GITHUB_REPO = "AQI-Predictor"
 SHAP_CSV_URL = (
     f"https://github.com/{GITHUB_ORG}/{GITHUB_REPO}"
-    f"/releases/download/shap-latest/shap_importance_file.csv"
+    f"/releases/download/shap-latest/shap_importance.csv"
 )
 
 # ─────────────────────────────────────────────────────────────────────
