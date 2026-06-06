@@ -226,14 +226,13 @@ def fetch_future_weather_forecasts(lat: float, lon: float, days: int = 3) -> Dic
         return None
     
     # Extract weather at 24h, 48h, 72h intervals
-    now = pd.Timestamp.utcnow()
     forecasts = {}
-    
+    now = pd.Timestamp.utcnow().replace(tzinfo=None)  # tz-naive
+
     for horizon_hours in [24, 48, 72]:
         target_time = now + timedelta(hours=horizon_hours)
-        
-        # Find closest forecast timestamp
-        forecast_df['timestamp'] = pd.to_datetime(forecast_df['timestamp'])
+
+        forecast_df['timestamp'] = pd.to_datetime(forecast_df['timestamp']).dt.tz_localize(None)
         time_diffs = (forecast_df['timestamp'] - target_time).abs()
         closest_idx = time_diffs.idxmin()
         
