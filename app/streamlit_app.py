@@ -411,7 +411,7 @@ def render_dashboard():
                 <div>
                     <div style='font-size:26px;'>💨</div>
                     <div style='font-size:17px; font-weight:700; color:#1a1d23; font-family:"JetBrains Mono",monospace;'>{f"{wind:.1f}" if wind is not None else "—"}</div>
-                    <div style='font-size:10px; color:#8a9099; text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-top:2px;'>Wind m/s</div>
+                    <div style='font-size:10px; color:#8a9099; text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-top:2px;'>Wind km/h</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
