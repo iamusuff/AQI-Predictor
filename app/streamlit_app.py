@@ -21,8 +21,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 MODELS_DIR = os.path.join(os.path.dirname(__file__), '..', 'models')
 
 # ── GitHub Releases — single source of truth ──────────────────────────
-GITHUB_ORG  = "<your-org>"
-GITHUB_REPO = "<your-repo>"
+GITHUB_ORG  = "iamusuff"
+GITHUB_REPO = "AQI-Predictor"
 SHAP_CSV_URL = (
     f"https://github.com/{GITHUB_ORG}/{GITHUB_REPO}"
     f"/releases/download/shap-latest/shap_importance_file.csv"
