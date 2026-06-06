@@ -1,15 +1,16 @@
 """
 Hawa Alert AQI Predictor — Redesigned Dashboard
-Sample UI: Clean light/dark card layout with sidebar nav
+No local files. SHAP from GitHub Releases. Charts from CSV data.
 """
 
 import sys
 import os
 from datetime import datetime, timedelta
-from pathlib import Path
+import io
 
 import pandas as pd
 import numpy as np
+import requests
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
@@ -17,9 +18,15 @@ from plotly.subplots import make_subplots
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-DATA_FILE     = os.path.join(os.path.dirname(__file__), '..', 'data', 'features.csv')
-MODELS_DIR    = os.path.join(os.path.dirname(__file__), '..', 'models')
-NOTEBOOKS_DIR = os.path.join(os.path.dirname(__file__), '..', 'notebooks')
+MODELS_DIR = os.path.join(os.path.dirname(__file__), '..', 'models')
+
+# ── GitHub Releases — single source of truth ──────────────────────────
+GITHUB_ORG  = "<your-org>"
+GITHUB_REPO = "<your-repo>"
+SHAP_CSV_URL = (
+    f"https://github.com/{GITHUB_ORG}/{GITHUB_REPO}"
+    f"/releases/download/shap-latest/shap_importance_file.csv"
+)
 
 # ─────────────────────────────────────────────────────────────────────
 # Page Config
@@ -32,92 +39,60 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────────────
-# CSS — Sample UI Design
+# CSS
 # ─────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ── Global Reset ─────────────────────────────── */
 html, body, [class*="css"] {
     font-family: 'Sora', sans-serif !important;
     background-color: #f0f2f5 !important;
     color: #1a1d23 !important;
 }
-
 .main .block-container {
     padding: 1.8rem 2rem 3rem 2rem !important;
     max-width: 1320px !important;
     background-color: #f0f2f5 !important;
 }
-
-/* ── Sidebar ──────────────────────────────────── */
 section[data-testid="stSidebar"] {
     background: #1a1d23 !important;
     border-right: 1px solid #2a2d35 !important;
     min-width: 230px !important;
 }
-section[data-testid="stSidebar"] * {
-    color: #c8ccd4 !important;
-}
+section[data-testid="stSidebar"] * { color: #c8ccd4 !important; }
 section[data-testid="stSidebar"] .stRadio label {
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    padding: 6px 10px !important;
-    border-radius: 8px !important;
-    cursor: pointer !important;
-    transition: background 0.15s !important;
+    font-size: 13px !important; font-weight: 500 !important;
+    padding: 6px 10px !important; border-radius: 8px !important;
+    cursor: pointer !important; transition: background 0.15s !important;
 }
 section[data-testid="stSidebar"] .stRadio label:hover {
-    background: rgba(255,255,255,0.07) !important;
-    color: #fff !important;
+    background: rgba(255,255,255,0.07) !important; color: #fff !important;
 }
-section[data-testid="stSidebar"] hr {
-    border-color: #2a2d35 !important;
-}
+section[data-testid="stSidebar"] hr { border-color: #2a2d35 !important; }
 section[data-testid="stSidebar"] .stButton button {
-    background: #2e3240 !important;
-    color: #c8ccd4 !important;
-    border: 1px solid #3a3e4a !important;
-    border-radius: 8px !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
+    background: #2e3240 !important; color: #c8ccd4 !important;
+    border: 1px solid #3a3e4a !important; border-radius: 8px !important;
+    font-size: 13px !important; font-weight: 500 !important;
     transition: all 0.15s !important;
 }
 section[data-testid="stSidebar"] .stButton button:hover {
-    background: #3a3e4a !important;
-    color: #fff !important;
+    background: #3a3e4a !important; color: #fff !important;
 }
-
-/* ── Page Title ───────────────────────────────── */
 h1 {
-    font-size: 22px !important;
-    font-weight: 700 !important;
-    color: #1a1d23 !important;
-    letter-spacing: -0.5px !important;
+    font-size: 22px !important; font-weight: 700 !important;
+    color: #1a1d23 !important; letter-spacing: -0.5px !important;
     margin-bottom: 0.2rem !important;
 }
-h2 {
-    font-size: 20px !important;
-    font-weight: 700 !important;
-    color: #1a1d23 !important;
-    letter-spacing: -0.4px !important;
-}
+h2 { font-size: 20px !important; font-weight: 700 !important; color: #1a1d23 !important; letter-spacing: -0.4px !important; }
 h3, h4 {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: #4a5060 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.6px !important;
-    margin-bottom: 0.8rem !important;
+    font-size: 14px !important; font-weight: 600 !important;
+    color: #4a5060 !important; text-transform: uppercase !important;
+    letter-spacing: 0.6px !important; margin-bottom: 0.8rem !important;
 }
-
-/* ── Cards ────────────────────────────────────── */
 div[data-testid="stVerticalBlockBorderWrapper"] {
-    background: #ffffff !important;
-    border: 1px solid #e4e7ed !important;
-    border-radius: 16px !important;
-    padding: 1.4rem 1.6rem !important;
+    background: #ffffff !important; border: 1px solid #e4e7ed !important;
+    border-radius: 16px !important; padding: 1.4rem 1.6rem !important;
     box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04) !important;
     transition: box-shadow 0.2s ease, transform 0.2s ease !important;
 }
@@ -125,102 +100,37 @@ div[data-testid="stVerticalBlockBorderWrapper"]:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.07) !important;
     transform: translateY(-1px) !important;
 }
-
-/* ── Metrics ──────────────────────────────────── */
 div[data-testid="stMetricLabel"] p {
-    font-size: 11px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.8px !important;
-    color: #8a9099 !important;
-    font-weight: 600 !important;
+    font-size: 11px !important; text-transform: uppercase !important;
+    letter-spacing: 0.8px !important; color: #8a9099 !important; font-weight: 600 !important;
 }
 div[data-testid="stMetricValue"] {
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 21px !important;
-    font-weight: 500 !important;
-    color: #1a1d23 !important;
+    font-size: 21px !important; font-weight: 500 !important; color: #1a1d23 !important;
 }
-div[data-testid="stMetricDelta"] {
-    font-size: 12px !important;
-}
-
-/* ── Alert Banners ────────────────────────────── */
 div[data-testid="stAlert"] {
-    border-radius: 12px !important;
-    border-width: 1px !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    padding: 0.7rem 1rem !important;
+    border-radius: 12px !important; border-width: 1px !important;
+    font-size: 13px !important; font-weight: 500 !important; padding: 0.7rem 1rem !important;
 }
-
-/* ── Selectbox / Radio ────────────────────────── */
-div[data-testid="stSelectbox"] > div,
-div[data-baseweb="select"] {
-    border-radius: 10px !important;
-    border-color: #e4e7ed !important;
-    font-size: 13px !important;
-    background: #f8f9fb !important;
+div[data-testid="stSelectbox"] > div, div[data-baseweb="select"] {
+    border-radius: 10px !important; border-color: #e4e7ed !important;
+    font-size: 13px !important; background: #f8f9fb !important;
 }
-
-/* ── DataFrames ───────────────────────────────── */
-div[data-testid="stDataFrame"] {
-    border-radius: 12px !important;
-    overflow: hidden !important;
-    border: 1px solid #e4e7ed !important;
-}
+div[data-testid="stDataFrame"] { border-radius: 12px !important; overflow: hidden !important; border: 1px solid #e4e7ed !important; }
 div[data-testid="stDataFrame"] table thead tr th {
-    background: #f4f6f9 !important;
-    font-size: 11px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.6px !important;
-    color: #8a9099 !important;
-    font-weight: 600 !important;
+    background: #f4f6f9 !important; font-size: 11px !important;
+    text-transform: uppercase !important; letter-spacing: 0.6px !important;
+    color: #8a9099 !important; font-weight: 600 !important;
 }
-div[data-testid="stDataFrame"] table tbody tr:nth-child(even) {
-    background: #fafbfc !important;
-}
-
-/* ── Expander ─────────────────────────────────── */
+div[data-testid="stDataFrame"] table tbody tr:nth-child(even) { background: #fafbfc !important; }
 details {
-    border-radius: 12px !important;
-    border: 1px solid #e4e7ed !important;
-    background: #fff !important;
-    padding: 0.2rem !important;
+    border-radius: 12px !important; border: 1px solid #e4e7ed !important;
+    background: #fff !important; padding: 0.2rem !important;
 }
-details summary {
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: #4a5060 !important;
-    padding: 0.6rem 0.8rem !important;
-}
-
-/* ── Divider ──────────────────────────────────── */
-hr {
-    border-color: #e8eaee !important;
-    margin: 1rem 0 !important;
-}
-
-/* ── Caption / Small Text ─────────────────────── */
-small, .stCaption, [data-testid="stCaptionContainer"] p {
-    color: #8a9099 !important;
-    font-size: 11px !important;
-}
-
-/* ── JSON viewer ──────────────────────────────── */
-div[data-testid="stJson"] {
-    background: #f8f9fb !important;
-    border-radius: 10px !important;
-    border: 1px solid #e4e7ed !important;
-    font-size: 12px !important;
-}
-
-/* ── Image caption ────────────────────────────── */
-figcaption {
-    font-size: 11px !important;
-    color: #8a9099 !important;
-    text-align: center !important;
-    margin-top: 6px !important;
-}
+details summary { font-size: 13px !important; font-weight: 600 !important; color: #4a5060 !important; padding: 0.6rem 0.8rem !important; }
+hr { border-color: #e8eaee !important; margin: 1rem 0 !important; }
+small, .stCaption, [data-testid="stCaptionContainer"] p { color: #8a9099 !important; font-size: 11px !important; }
+div[data-testid="stJson"] { background: #f8f9fb !important; border-radius: 10px !important; border: 1px solid #e4e7ed !important; font-size: 12px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -245,15 +155,7 @@ def aqi_category(aqi):
 def aqi_color(aqi):
     return aqi_category(aqi)[1]
 
-def load_history(days=30):
-    if not os.path.exists(DATA_FILE):
-        return pd.DataFrame()
-    df = pd.read_csv(DATA_FILE, parse_dates=["timestamp"])
-    cutoff = datetime.now() - timedelta(days=days)
-    return df[df["timestamp"] >= cutoff].sort_values("timestamp").reset_index(drop=True)
-
 def apply_chart_theme(fig, height=320):
-    """Clean white-background chart theme."""
     fig.update_layout(
         margin=dict(l=8, r=8, t=12, b=8),
         height=height,
@@ -263,8 +165,7 @@ def apply_chart_theme(fig, height=320):
         hovermode="x unified",
         legend=dict(
             bgcolor='rgba(255,255,255,0.9)',
-            bordercolor='#e4e7ed',
-            borderwidth=1,
+            bordercolor='#e4e7ed', borderwidth=1,
             font=dict(size=11),
         ),
     )
@@ -279,6 +180,245 @@ def apply_chart_theme(fig, height=320):
         tickfont=dict(size=10, color="#8a9099"),
     )
     return fig
+
+# ─────────────────────────────────────────────────────────────────────
+# SHAP Data Loader — GitHub Releases only
+# ─────────────────────────────────────────────────────────────────────
+@st.cache_data(ttl=1800)
+def load_shap_importance() -> pd.DataFrame:
+    """Fetch latest SHAP importance CSV from GitHub Releases."""
+    try:
+        resp = requests.get(SHAP_CSV_URL, timeout=15)
+        if resp.status_code == 200:
+            return pd.read_csv(io.StringIO(resp.text))
+        else:
+            st.warning(f"Could not fetch SHAP data (HTTP {resp.status_code}). Check GitHub Release tag.")
+            return pd.DataFrame()
+    except Exception as e:
+        st.warning(f"SHAP data fetch failed: {e}")
+        return pd.DataFrame()
+
+# ─────────────────────────────────────────────────────────────────────
+# Beautiful SHAP Charts — built from CSV
+# ─────────────────────────────────────────────────────────────────────
+def render_shap_charts(df: pd.DataFrame):
+    """
+    Renders 3 stunning Plotly SHAP charts from importance CSV.
+    Expects columns: feature, importance (and optionally: std, positive, negative)
+    Auto-detects column names.
+    """
+    if df.empty:
+        st.error("No SHAP data available. Make sure GitHub Actions has pushed the latest release.")
+        return
+
+    # ── Auto-detect columns ───────────────────────────────────────
+    cols = [c.lower() for c in df.columns]
+    feat_col = df.columns[cols.index("feature")]       if "feature"    in cols else df.columns[0]
+    imp_col  = df.columns[cols.index("importance")]    if "importance" in cols else df.columns[1]
+    std_col  = df.columns[cols.index("std")]           if "std"        in cols else None
+    pos_col  = df.columns[cols.index("positive")]      if "positive"   in cols else None
+    neg_col  = df.columns[cols.index("negative")]      if "negative"   in cols else None
+
+    df = df.copy()
+    df[imp_col] = pd.to_numeric(df[imp_col], errors="coerce").abs()
+    df = df.dropna(subset=[imp_col]).sort_values(imp_col, ascending=False).head(20).reset_index(drop=True)
+
+    top_n = min(15, len(df))
+    df_top = df.head(top_n)
+
+    # ── Color scale: green → yellow → red by rank ────────────────
+    norm   = df_top[imp_col] / df_top[imp_col].max()
+    colors = [
+        f"rgba({int(239 * v + 34 * (1-v))}, {int(68 * v + 197 * (1-v))}, {int(68 * v + 94 * (1-v))}, 0.85)"
+        for v in norm
+    ]
+
+    # ════════════════════════════════════════════════════════════════
+    # Chart 1 — Animated Horizontal Bar (Hero Chart)
+    # ════════════════════════════════════════════════════════════════
+    fig1 = go.Figure()
+
+    # Background glow bars
+    fig1.add_trace(go.Bar(
+        y=df_top[feat_col][::-1],
+        x=df_top[imp_col][::-1] * 1.05,
+        orientation="h",
+        marker=dict(color="rgba(234,179,8,0.06)", line=dict(width=0)),
+        showlegend=False,
+        hoverinfo="skip",
+    ))
+
+    # Main bars
+    fig1.add_trace(go.Bar(
+        y=df_top[feat_col][::-1],
+        x=df_top[imp_col][::-1],
+        orientation="h",
+        marker=dict(
+            color=colors[::-1],
+            line=dict(width=0),
+        ),
+        text=[f"  {v:.4f}" for v in df_top[imp_col][::-1]],
+        textposition="outside",
+        textfont=dict(size=10, color="#4a5060", family="JetBrains Mono"),
+        hovertemplate="<b>%{y}</b><br>SHAP Importance: %{x:.5f}<extra></extra>",
+    ))
+
+    # Error bars if std available
+    if std_col:
+        fig1.data[1].error_x = dict(
+            type="data",
+            array=df_top[std_col][::-1].tolist(),
+            visible=True,
+            color="rgba(100,100,100,0.3)",
+            thickness=1.5,
+            width=4,
+        )
+
+    fig1.update_layout(
+        barmode="overlay",
+        height=420,
+        margin=dict(l=10, r=80, t=30, b=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Sora, sans-serif", size=11, color="#4a5060"),
+        showlegend=False,
+        xaxis=dict(
+            title="Mean |SHAP Value|",
+            showgrid=True, gridcolor="#f0f2f5",
+            zeroline=True, zerolinecolor="#e4e7ed", zerolinewidth=1.5,
+            tickfont=dict(size=9, family="JetBrains Mono"),
+        ),
+        yaxis=dict(
+            showgrid=False,
+            tickfont=dict(size=11, color="#1a1d23"),
+        ),
+    )
+
+    # ════════════════════════════════════════════════════════════════
+    # Chart 2 — Radial / Polar Importance (Attention-grabbing)
+    # ════════════════════════════════════════════════════════════════
+    top8 = df_top.head(8)
+    norm8 = top8[imp_col] / top8[imp_col].max()
+
+    fig2 = go.Figure()
+
+    fig2.add_trace(go.Scatterpolar(
+        r=norm8[imp_col] if imp_col in norm8 else top8[imp_col],
+        theta=top8[feat_col],
+        fill="toself",
+        fillcolor="rgba(234,179,8,0.15)",
+        line=dict(color="#eab308", width=2.5),
+        marker=dict(
+            size=norm8 * 14 + 6,
+            color=top8[imp_col],
+            colorscale=[[0, "#22c55e"], [0.5, "#eab308"], [1, "#ef4444"]],
+            showscale=False,
+            line=dict(color="white", width=2),
+        ),
+        text=top8[feat_col],
+        hovertemplate="<b>%{text}</b><br>Importance: %{r:.5f}<extra></extra>",
+        name="SHAP Importance",
+    ))
+
+    fig2.update_layout(
+        polar=dict(
+            bgcolor="rgba(248,249,251,0.8)",
+            radialaxis=dict(
+                visible=True,
+                showticklabels=True,
+                tickfont=dict(size=8, color="#8a9099", family="JetBrains Mono"),
+                gridcolor="#e4e7ed",
+                linecolor="#e4e7ed",
+            ),
+            angularaxis=dict(
+                tickfont=dict(size=10, color="#1a1d23", family="Sora"),
+                gridcolor="#e8eaee",
+                linecolor="#e4e7ed",
+            ),
+        ),
+        height=380,
+        margin=dict(l=40, r=40, t=30, b=30),
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Sora, sans-serif", size=11),
+        showlegend=False,
+    )
+
+    # ════════════════════════════════════════════════════════════════
+    # Chart 3 — Waterfall-style Cumulative Contribution
+    # ════════════════════════════════════════════════════════════════
+    df_wf = df_top.head(10).copy()
+    df_wf["cumulative"] = df_wf[imp_col].cumsum()
+    df_wf["pct"]        = (df_wf[imp_col] / df_wf[imp_col].sum() * 100).round(1)
+
+    wf_colors = [
+        "#22c55e" if i < 3 else "#eab308" if i < 6 else "#f97316" if i < 8 else "#ef4444"
+        for i in range(len(df_wf))
+    ]
+
+    fig3 = go.Figure()
+
+    # Cumulative area
+    fig3.add_trace(go.Scatter(
+        x=df_wf[feat_col],
+        y=df_wf["cumulative"],
+        mode="lines+markers",
+        fill="tozeroy",
+        fillcolor="rgba(59,130,246,0.08)",
+        line=dict(color="#3b82f6", width=2.5, dash="dot"),
+        marker=dict(size=7, color="#3b82f6", line=dict(color="white", width=2)),
+        name="Cumulative",
+        yaxis="y2",
+        hovertemplate="<b>%{x}</b><br>Cumulative: %{y:.5f}<extra></extra>",
+    ))
+
+    # Individual contribution bars
+    fig3.add_trace(go.Bar(
+        x=df_wf[feat_col],
+        y=df_wf[imp_col],
+        marker=dict(
+            color=wf_colors,
+            line=dict(width=0),
+            opacity=0.85,
+        ),
+        text=[f"{p}%" for p in df_wf["pct"]],
+        textposition="outside",
+        textfont=dict(size=9, color="#4a5060", family="JetBrains Mono"),
+        name="Contribution",
+        hovertemplate="<b>%{x}</b><br>Importance: %{y:.5f}<br>Share: %{text}<extra></extra>",
+    ))
+
+    fig3.update_layout(
+        height=360,
+        margin=dict(l=10, r=60, t=30, b=80),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Sora, sans-serif", size=11, color="#4a5060"),
+        barmode="group",
+        legend=dict(
+            orientation="h", x=0, y=-0.25,
+            bgcolor="rgba(255,255,255,0.9)",
+            bordercolor="#e4e7ed", borderwidth=1,
+        ),
+        xaxis=dict(
+            tickangle=-35,
+            tickfont=dict(size=9, color="#4a5060"),
+            showgrid=False,
+        ),
+        yaxis=dict(
+            title="SHAP Importance",
+            showgrid=True, gridcolor="#f0f2f5",
+            tickfont=dict(size=9, family="JetBrains Mono"),
+        ),
+        yaxis2=dict(
+            title="Cumulative",
+            overlaying="y", side="right",
+            showgrid=False,
+            tickfont=dict(size=9, color="#3b82f6", family="JetBrains Mono"),
+        ),
+    )
+
+    return fig1, fig2, fig3
+
 
 # ─────────────────────────────────────────────────────────────────────
 # Sidebar
@@ -325,7 +465,18 @@ def get_inference():
 
 @st.cache_data(ttl=300)
 def get_history_data(days):
-    return load_history(days)
+    """Load history from Hopsworks Feature Store via inference result."""
+    try:
+        result = get_inference()
+        df = result.get("history", pd.DataFrame())
+        if not df.empty and "timestamp" in df.columns:
+            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            cutoff = datetime.now() - timedelta(days=days)
+            return df[df["timestamp"] >= cutoff].sort_values("timestamp").reset_index(drop=True)
+        return df
+    except Exception:
+        return pd.DataFrame()
+
 
 # ─────────────────────────────────────────────────────────────────────
 # Dashboard Page
@@ -345,15 +496,13 @@ def render_dashboard():
     current_aqi = predictions["current"]["aqi"]
     cat, color, desc = aqi_category(current_aqi)
 
-    # ── Page Header ───────────────────────────────────────────────
     st.markdown(f"""
     <div style='margin-bottom:1.4rem;'>
-        <h1 style='margin:0 0 4px 0;'>Pearl AQI Predictor — Interactive Streamlit Dashboard</h1>
+        <h1 style='margin:0 0 4px 0;'>Hawa Alert AQI Predictor — Karachi Dashboard</h1>
         <p style='color:#8a9099; font-size:13px; margin:0;'>Real-time air quality monitoring & ML forecasting · Karachi, Pakistan</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Alert Banner ──────────────────────────────────────────────
     if current_aqi > 150:
         level = "🔴 RED ALERT" if current_aqi > 200 else "🟠 ORANGE ALERT"
         st.error(f"**{level} — AQI {current_aqi:.0f} ({cat}):** {desc}")
@@ -364,26 +513,21 @@ def render_dashboard():
 
     st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
-    # ── Row 1: AQI Card | Weather Card | Forecast Card ───────────
     col_aqi, col_weather, col_forecast = st.columns([1.1, 1.1, 1.5])
 
     with col_aqi:
         with st.container(border=True):
             st.markdown("#### Current AQI")
-            # Big AQI gauge card
             badge_bg = color
             st.markdown(
                 f"""<div style='
                     background: linear-gradient(135deg, {badge_bg}22 0%, {badge_bg}11 100%);
-                    border: 2px solid {badge_bg}55;
-                    border-radius: 14px;
-                    padding: 22px 16px 18px 16px;
-                    text-align: center;
-                    margin-bottom: 14px;
+                    border: 2px solid {badge_bg}55; border-radius: 14px;
+                    padding: 22px 16px 18px 16px; text-align: center; margin-bottom: 14px;
                 '>
-                    <div style='font-size:54px; font-weight:700; color:{badge_bg}; 
+                    <div style='font-size:54px; font-weight:700; color:{badge_bg};
                                 font-family:"JetBrains Mono",monospace; line-height:1;'>{current_aqi:.0f}</div>
-                    <div style='font-size:13px; font-weight:600; color:{badge_bg}; 
+                    <div style='font-size:13px; font-weight:600; color:{badge_bg};
                                 margin-top:8px; letter-spacing:0.5px;'>{cat}</div>
                 </div>""",
                 unsafe_allow_html=True,
@@ -395,7 +539,6 @@ def render_dashboard():
             temp = conditions.get('temperature')
             hum  = conditions.get('humidity')
             wind = conditions.get('wind_speed')
-            # Weather icons row
             st.markdown(f"""
             <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; text-align:center; padding:8px 0 10px 0;'>
                 <div>
@@ -442,7 +585,6 @@ def render_dashboard():
                 fill="tonexty", fillcolor="rgba(234,179,8,0.1)",
                 showlegend=False,
             ))
-            # 3-day lines
             colors_fc = ["#22c55e", "#f97316", "#a855f7"]
             for i in range(1, len(fdf)):
                 fig.add_trace(go.Scatter(
@@ -462,44 +604,47 @@ def render_dashboard():
 
     st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 
-    # ── Row 2: SHAP Feature Importance | Historical AQI Trends ───
+    # ── SHAP Quick Preview on Dashboard ──────────────────────────
     col_shap, col_hist = st.columns([1, 1.3])
 
     with col_shap:
         with st.container(border=True):
             st.markdown("#### SHAP Feature Importance")
-            shap_dir = Path(NOTEBOOKS_DIR)
-            bar_png  = shap_dir / "shap_02_bar_plot.png"
-            if bar_png.exists():
-                st.image(str(bar_png), caption="SHAP Feature Importance", use_container_width=True)
-            else:
-                # Placeholder chart
-                feat_names = ["NaN", "SWI", "Graneous\nData", "SHAP\nFeatures", "Modulo", "AQI", "Pollutant"]
-                feat_vals  = [28, 22, 18, 14, 10, 7, 5]
+            shap_df = load_shap_importance()
+            if not shap_df.empty:
+                cols_l = [c.lower() for c in shap_df.columns]
+                feat_c = shap_df.columns[cols_l.index("feature")]    if "feature"    in cols_l else shap_df.columns[0]
+                imp_c  = shap_df.columns[cols_l.index("importance")] if "importance" in cols_l else shap_df.columns[1]
+                shap_df[imp_c] = pd.to_numeric(shap_df[imp_c], errors="coerce").abs()
+                top = shap_df.dropna(subset=[imp_c]).sort_values(imp_c, ascending=False).head(8)
+                norm = top[imp_c] / top[imp_c].max()
+                bar_colors = [
+                    f"rgba({int(239*v+34*(1-v))},{int(68*v+197*(1-v))},{int(68*v+94*(1-v))},0.85)"
+                    for v in norm
+                ]
                 fig_s = go.Figure(go.Bar(
-                    x=feat_vals, y=feat_names,
+                    x=top[imp_c][::-1],
+                    y=top[feat_c][::-1],
                     orientation="h",
-                    marker=dict(
-                        color=feat_vals,
-                        colorscale=[[0, "#22c55e"], [0.5, "#eab308"], [1, "#ef4444"]],
-                        showscale=True,
-                        colorbar=dict(
-                            title=dict(text="High", side="right"),
-                            thickness=10, len=0.6,
-                            tickfont=dict(size=9),
-                        ),
-                    ),
+                    marker=dict(color=bar_colors[::-1], line=dict(width=0)),
+                    text=[f"{v:.4f}" for v in top[imp_c][::-1]],
+                    textposition="outside",
+                    textfont=dict(size=9, family="JetBrains Mono"),
+                    hovertemplate="<b>%{y}</b><br>%{x:.5f}<extra></extra>",
                 ))
-                fig_s.update_layout(
-                    yaxis=dict(title="Top Features", tickfont=dict(size=10)),
-                    xaxis=dict(title="Feature Importance", tickfont=dict(size=10)),
-                )
                 apply_chart_theme(fig_s, height=260)
+                fig_s.update_layout(
+                    xaxis_title="Mean |SHAP|",
+                    margin=dict(l=8, r=60, t=12, b=8),
+                )
                 st.plotly_chart(fig_s, use_container_width=True)
+                st.caption("→ See **Feature Importance** page for full analysis")
+            else:
+                st.info("SHAP data not yet available from GitHub Releases.")
 
     with col_hist:
         with st.container(border=True):
-            st.markdown("#### Historical AQI trends (in 7 days)")
+            st.markdown("#### Historical AQI Trends (7 days)")
             df_hist = get_history_data(7)
             if not df_hist.empty and "aqi" in df_hist.columns:
                 fig_h = go.Figure()
@@ -512,7 +657,7 @@ def render_dashboard():
                 if "aqi_rolling_24h" in df_hist.columns:
                     fig_h.add_trace(go.Scatter(
                         x=df_hist["timestamp"], y=df_hist["aqi_rolling_24h"],
-                        mode="lines", name="MSE",
+                        mode="lines", name="24h Avg",
                         line=dict(color="#f97316", width=2, dash="dot"),
                     ))
                 apply_chart_theme(fig_h, height=260)
@@ -522,36 +667,10 @@ def render_dashboard():
                 )
                 st.plotly_chart(fig_h, use_container_width=True)
             else:
-                # Placeholder
-                days_x = list(range(1, 8))
-                sample_aqi = [180, 240, 160, 300, 210, 170, 190]
-                sample_mse = [160, 200, 150, 260, 180, 155, 175]
-                sample_rmse= [140, 180, 130, 240, 160, 140, 160]
-                sample_worse=[200, 260, 180, 320, 240, 200, 220]
-                sample_worst=[220, 280, 200, 350, 260, 220, 240]
-                fig_h = go.Figure()
-                for name, vals, clr in [
-                    ("AQI",   sample_aqi,  "#3b82f6"),
-                    ("MSE",   sample_mse,  "#ef4444"),
-                    ("RMSE",  sample_rmse, "#22c55e"),
-                    ("Worse", sample_worse,"#f97316"),
-                    ("Worst", sample_worst,"#a855f7"),
-                ]:
-                    fig_h.add_trace(go.Scatter(
-                        x=days_x, y=vals, mode="lines+markers", name=name,
-                        line=dict(color=clr, width=1.8),
-                        marker=dict(size=5),
-                    ))
-                apply_chart_theme(fig_h, height=260)
-                fig_h.update_layout(
-                    legend=dict(orientation="v", x=1.01, y=1),
-                    yaxis_title="AQI", xaxis_title="Days",
-                )
-                st.plotly_chart(fig_h, use_container_width=True)
+                st.info("Historical data loading from Hopsworks...")
 
     st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 
-    # ── Row 3: Weather Conditions | Pollutant Levels ─────────────
     col_wc, col_pl = st.columns(2)
 
     with col_wc:
@@ -560,9 +679,9 @@ def render_dashboard():
             df_full = get_history_data(history_days)
             fig_w = go.Figure()
             weather_cols = [
-                ("temperature", "#3b82f6", "Weather"),
-                ("humidity",    "#06b6d4", "Noon"),
-                ("wind_speed",  "#8b5cf6", "Moist Sow"),
+                ("temperature", "#3b82f6", "Temperature"),
+                ("humidity",    "#06b6d4", "Humidity"),
+                ("wind_speed",  "#8b5cf6", "Wind Speed"),
             ]
             if not df_full.empty:
                 for col_name, clr, nm in weather_cols:
@@ -574,7 +693,7 @@ def render_dashboard():
             apply_chart_theme(fig_w, height=210)
             fig_w.update_layout(
                 legend=dict(orientation="h", y=-0.28, x=0, font=dict(size=10)),
-                xaxis_title="Time (days)", yaxis_title="Conditions",
+                xaxis_title="Time", yaxis_title="Conditions",
             )
             st.plotly_chart(fig_w, use_container_width=True)
 
@@ -584,9 +703,9 @@ def render_dashboard():
             df_full = get_history_data(history_days)
             fig_p = go.Figure()
             pollutant_cols = [
-                ("pm25", "#ef4444", "AQI"),
-                ("pm10", "#f97316", "MO"),
-                ("o3",   "#22c55e", "MAI"),
+                ("pm25", "#ef4444", "PM2.5"),
+                ("pm10", "#f97316", "PM10"),
+                ("o3",   "#22c55e", "O₃"),
             ]
             if not df_full.empty:
                 for col_name, clr, nm in pollutant_cols:
@@ -598,13 +717,12 @@ def render_dashboard():
             apply_chart_theme(fig_p, height=210)
             fig_p.update_layout(
                 legend=dict(orientation="h", y=-0.28, x=0, font=dict(size=10)),
-                xaxis_title="Pollutant Levels", yaxis_title="",
+                xaxis_title="Time", yaxis_title="Concentration",
             )
             st.plotly_chart(fig_p, use_container_width=True)
 
     st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 
-    # ── Row 4: Model Performance Metrics ─────────────────────────
     metrics = model_info.get("metrics", {})
     r2   = metrics.get('test_r2',   0.85)
     rmse = metrics.get('test_rmse', 12.3)
@@ -613,31 +731,21 @@ def render_dashboard():
 
     with st.container(border=True):
         mc1, mc2, mc3, mc4 = st.columns(4)
-
         for col_m, label, val, sub in [
-            (mc1, f"Test R²: {r2:.2f}",    r2,   "Test R²: Ideal performance: metrics"),
-            (mc2, f"Test RMSE: {rmse:.1f}", rmse, "Test RMSE: Performance: metrics"),
-            (mc3, f"Test MAE: {mae:.1f}",   mae,  "Test MAE: Performanety ration"),
-            (mc4, f"Model ME: {mape:.1f}%", mape, "Test MAE: Performance ratics"),
+            (mc1, f"Test R²: {r2:.2f}",    r2,   "Explained variance — higher is better"),
+            (mc2, f"Test RMSE: {rmse:.1f}", rmse, "Root mean squared error"),
+            (mc3, f"Test MAE: {mae:.1f}",   mae,  "Mean absolute error"),
+            (mc4, f"MAPE: {mape:.1f}%",     mape, "Mean absolute percentage error"),
         ]:
             col_m.markdown(
                 f"""<div style='background:#f8f9fb; border:1px solid #e4e7ed; border-radius:12px;
                                padding:14px 16px; text-align:center;'>
-                    <div style='font-size:16px; font-weight:700; color:#1a1d23; 
+                    <div style='font-size:16px; font-weight:700; color:#1a1d23;
                                 font-family:"JetBrains Mono",monospace;'>{label}</div>
-                    <div style='font-size:10px; color:#8a9099; margin-top:4px; 
-                                font-weight:500;'>{sub}</div>
+                    <div style='font-size:10px; color:#8a9099; margin-top:4px; font-weight:500;'>{sub}</div>
                 </div>""",
                 unsafe_allow_html=True,
             )
-
-    st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
-    st.markdown(
-        "<div style='font-size:11px; color:#8a9099; text-align:center; padding:4px 0;'>"
-        "This model performance metrics is milita borature on pastlit nnosi-lol bit predicos for mxatin gratwecating a oaponents in the sorach."
-        "</div>",
-        unsafe_allow_html=True,
-    )
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -696,11 +804,9 @@ def render_forecast():
 **Forecasting Method:** {forecast_method}
 
 - **Current (t+0)**: Real-time prediction using latest AQICN pollutants + OpenMeteo weather
-- **24h / 48h / 72h**: TRUE multi-horizon predictions using OpenMeteo weather forecasts, physics-based pollutant persistence, and complete feature engineering for each horizon
-- **Confidence Intervals**: 95% prediction intervals based on model test RMSE — wider CIs for farther horizons
+- **24h / 48h / 72h**: TRUE multi-horizon predictions using OpenMeteo weather forecasts
+- **Confidence Intervals**: 95% prediction intervals based on model test RMSE
 - **Model**: {model_name}
-
-**NOT simple trend scaling** — each horizon gets an independent ML model prediction.
         """)
 
 
@@ -710,7 +816,7 @@ def render_forecast():
 def render_history():
     df = get_history_data(history_days)
     if df.empty:
-        st.warning("No historical data available. Run backfill first.")
+        st.warning("No historical data available from Hopsworks Feature Store.")
         return
 
     st.markdown(f"## 📈 Historical AQI — Last {history_days} Days")
@@ -782,74 +888,90 @@ def render_history():
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Feature Importance Page
+# Feature Importance Page — Full SHAP Analysis
 # ─────────────────────────────────────────────────────────────────────
 def render_shap():
-    st.markdown("## 🎯 Feature Importance (SHAP Analysis)")
-    st.markdown("Global feature importance from post-hoc SHAP analysis of the trained model.")
+    st.markdown("## 🎯 Feature Importance — SHAP Analysis")
+    st.markdown("Global feature importance from the latest trained model · fetched live from GitHub Releases.")
 
-    shap_dir  = Path(NOTEBOOKS_DIR)
-    png_files = sorted(shap_dir.glob("shap_*.png"))
+    col_refresh = st.columns([4, 1])
+    with col_refresh[1]:
+        if st.button("🔄 Refresh SHAP", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
 
-    if not png_files:
-        st.warning("No SHAP visualizations found. Run the SHAP analysis notebook first.")
+    shap_df = load_shap_importance()
+
+    if shap_df.empty:
+        st.error("⚠️ Could not load SHAP data from GitHub Releases. Make sure the `shap-latest` release exists.")
+        st.code(SHAP_CSV_URL, language="text")
         return
 
-    col1, col2  = st.columns(2)
-    summary_png = shap_dir / "shap_01_summary_plot.png"
-    bar_png     = shap_dir / "shap_02_bar_plot.png"
+    # Show raw data
+    with st.expander("📋 Raw SHAP Importance Data", expanded=False):
+        st.dataframe(shap_df, use_container_width=True, hide_index=True)
 
-    with col1:
-        with st.container(border=True):
-            if summary_png.exists():
-                st.image(str(summary_png), caption="SHAP Summary — Beeswarm Plot", use_container_width=True)
-    with col2:
-        with st.container(border=True):
-            if bar_png.exists():
-                st.image(str(bar_png), caption="Mean |SHAP| — Feature Attribution Bar Chart", use_container_width=True)
+    charts = render_shap_charts(shap_df)
+    if charts is None:
+        return
+    fig1, fig2, fig3 = charts
 
     st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
-    st.markdown("### 🔬 Feature Interactions")
-    dep_files = sorted(shap_dir.glob("shap_04_dependence_*.png"))
-    if dep_files:
-        cols = st.columns(min(3, len(dep_files)))
-        for i, f in enumerate(dep_files):
-            with cols[i % 3]:
-                st.image(str(f), caption=f.stem.replace("shap_04_dependence_", ""), use_container_width=True)
-    else:
-        st.info("Dependence plots not yet available.")
 
-    st.markdown("### 💧 Individual Prediction Explanations")
-    waterfall_files = sorted(shap_dir.glob("shap_03_waterfall_*.png"))
-    if waterfall_files:
-        cols = st.columns(len(waterfall_files))
-        for i, f in enumerate(waterfall_files):
-            with cols[i]:
-                st.image(str(f), caption=f"Sample {i+1}", use_container_width=True)
+    # ── Chart 1 — Hero Bar ───────────────────────────────────────
+    with st.container(border=True):
+        st.markdown("#### 📊 Top Feature Importances — Mean |SHAP|")
+        st.caption("Longer bar = stronger influence on AQI prediction. Color: green (lower) → red (higher importance).")
+        st.plotly_chart(fig1, use_container_width=True)
 
-    alert_png = shap_dir / "shap_05_alert_distribution.png"
-    if alert_png.exists():
-        st.markdown("### 🚨 Alert Distribution")
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+
+    # ── Charts 2 & 3 side by side ────────────────────────────────
+    col_radar, col_waterfall = st.columns(2)
+
+    with col_radar:
         with st.container(border=True):
-            st.image(str(alert_png), use_container_width=True)
+            st.markdown("#### 🕸️ Radar — Top 8 Features")
+            st.caption("Radial spread shows relative importance of top features across all dimensions.")
+            st.plotly_chart(fig2, use_container_width=True)
 
-    cross_png = shap_dir / "shap_06_cross_model_comparison.png"
-    if cross_png.exists():
-        st.markdown("### 📊 Cross-Model Feature Importance")
+    with col_waterfall:
         with st.container(border=True):
-            st.image(str(cross_png), use_container_width=True)
+            st.markdown("#### 📉 Cumulative Contribution")
+            st.caption("Bars = individual share. Dotted line = cumulative importance build-up across features.")
+            st.plotly_chart(fig3, use_container_width=True)
 
-    alert_csv = shap_dir / "shap_alert_report.csv"
-    if alert_csv.exists():
-        with st.expander("📋 Alert Report", expanded=False):
-            alert_df = pd.read_csv(alert_csv)
-            st.dataframe(alert_df, use_container_width=True)
-            alert_summary = alert_df["alert_level"].value_counts().to_frame("Count")
-            alert_summary["Percentage"] = (
-                alert_summary["Count"] / len(alert_df) * 100
-            ).round(1).astype(str) + "%"
-            st.markdown("**Alert Level Summary**")
-            st.dataframe(alert_summary, use_container_width=True)
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+
+    # ── Top 5 insight cards ──────────────────────────────────────
+    with st.container(border=True):
+        st.markdown("#### 🔬 Top Feature Insights")
+        cols_l = [c.lower() for c in shap_df.columns]
+        feat_c = shap_df.columns[cols_l.index("feature")]    if "feature"    in cols_l else shap_df.columns[0]
+        imp_c  = shap_df.columns[cols_l.index("importance")] if "importance" in cols_l else shap_df.columns[1]
+        shap_df[imp_c] = pd.to_numeric(shap_df[imp_c], errors="coerce").abs()
+        top5 = shap_df.dropna(subset=[imp_c]).sort_values(imp_c, ascending=False).head(5).reset_index(drop=True)
+        total = top5[imp_c].sum()
+
+        insight_cols = st.columns(5)
+        rank_colors  = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6"]
+        rank_labels  = ["🥇", "🥈", "🥉", "4th", "5th"]
+
+        for i, (_, row) in enumerate(top5.iterrows()):
+            pct = row[imp_c] / shap_df[imp_c].sum() * 100
+            insight_cols[i].markdown(
+                f"""<div style='background:linear-gradient(135deg,{rank_colors[i]}11,{rank_colors[i]}08);
+                               border:1.5px solid {rank_colors[i]}33; border-radius:14px;
+                               padding:14px 10px; text-align:center;'>
+                    <div style='font-size:20px; margin-bottom:6px;'>{rank_labels[i]}</div>
+                    <div style='font-size:11px; font-weight:700; color:#1a1d23;
+                                word-break:break-word; line-height:1.3; margin-bottom:8px;'>{row[feat_c]}</div>
+                    <div style='font-size:13px; font-weight:700; color:{rank_colors[i]};
+                                font-family:"JetBrains Mono",monospace;'>{row[imp_c]:.4f}</div>
+                    <div style='font-size:10px; color:#8a9099; margin-top:4px;'>{pct:.1f}% of total</div>
+                </div>""",
+                unsafe_allow_html=True,
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -909,12 +1031,6 @@ def render_model_info():
     else:
         st.warning(f"⚠️ **{method}** — Weather forecast unavailable; using current conditions for all horizons")
 
-    shap_report = os.path.join(NOTEBOOKS_DIR, "shap_summary_report.txt")
-    if os.path.exists(shap_report):
-        with st.expander("📝 SHAP Summary Report", expanded=False):
-            with open(shap_report, encoding="utf-8", errors="replace") as f:
-                st.text(f.read())
-
 
 # ─────────────────────────────────────────────────────────────────────
 # Router
@@ -930,7 +1046,7 @@ elif page == "Feature Importance":
 elif page == "Model Info":
     render_model_info()
 
-# ── Footer ────────────────────────────────────────────────────────────
+# ── Footer ─────────────────────────────────────────────────────────────
 st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
 st.markdown("---")
-st.caption("🌍 Hawa Alert AQI Engine · Data: AQICN + OpenMeteo · Model Registry: Hopsworks Feature Store")
+st.caption("🌍 Hawa Alert AQI Engine · Data: AQICN + OpenMeteo · Model Registry: Hopsworks · SHAP: GitHub Releases")

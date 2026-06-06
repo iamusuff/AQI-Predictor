@@ -65,7 +65,24 @@ jobs:
           name: model-comparison
           path: models/model_comparison.csv
           retention-days: 30
-      
+
+      - name: Delete existing shap-latest release (if exists)
+        run: |
+          gh release delete shap-latest --yes || true
+          git push origin :refs/tags/shap-latest || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-create shap-latest release with new CSV
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: shap-latest
+          name: "Latest SHAP Importance"
+          body: "Auto-updated on every model training run"
+          files: notebooks/shap_importance_file.csv   # ← update this path
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # - name: Commit model metadata (safe push)
       #   if: github.event_name == 'schedule'
       #   run: |
