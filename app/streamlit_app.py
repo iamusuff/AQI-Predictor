@@ -105,17 +105,6 @@ def get_history_data(days):
     return load_history(days)
 
 
-@st.cache_data(ttl=300)
-def get_model_metadata():
-    import json
-    md_dir = Path(MODELS_DIR)
-    md_files = sorted(md_dir.glob("*_metadata.json"))
-    if not md_files:
-        return None
-    with open(md_files[-1]) as f:
-        return json.load(f)
-
-
 # ─────────────────────────────────────────────────────────────────────
 # Dashboard Page
 # ─────────────────────────────────────────────────────────────────────
@@ -128,8 +117,8 @@ def render_dashboard():
         return
 
     predictions = result["predictions"]
-    conditions = result["current_conditions"]
-    model_info = result["model_info"]
+    conditions  = result["current_conditions"]
+    model_info  = result["model_info"]
 
     current_aqi = predictions["current"]["aqi"]
     cat, color, desc = aqi_category(current_aqi)
@@ -157,10 +146,10 @@ def render_dashboard():
         )
     with col2:
         st.metric("Temperature", f"{conditions.get('temperature', '—'):.1f}°C")
-        st.metric("Humidity", f"{conditions.get('humidity', '—'):.0f}%")
+        st.metric("Humidity",    f"{conditions.get('humidity',    '—'):.0f}%")
     with col3:
         st.metric("Wind Speed", f"{conditions.get('wind_speed', '—'):.1f} m/s")
-        st.metric("PM2.5", f"{conditions.get('pm25', '—'):.1f} µg/m³")
+        st.metric("PM2.5",      f"{conditions.get('pm25',       '—'):.1f} µg/m³")
 
     # ── 3-day forecast mini chart ────────────────────────────────
     st.subheader("📈 3-Day Forecast")
@@ -168,8 +157,8 @@ def render_dashboard():
     for label in ["current", "24h", "48h", "72h"]:
         p = predictions[label]
         forecast_data.append({
-            "label": label.upper(),
-            "aqi": p["aqi"],
+            "label":    label.upper(),
+            "aqi":      p["aqi"],
             "ci_lower": p.get("ci_lower", p["aqi"] * 0.95),
             "ci_upper": p.get("ci_upper", p["aqi"] * 1.05),
         })
@@ -203,9 +192,9 @@ def render_dashboard():
     with st.expander("🌤️ Current Conditions", expanded=False):
         cols = st.columns(4)
         labels = [
-            ("PM2.5", "pm25", "µg/m³"),
-            ("PM10", "pm10", "µg/m³"),
-            ("Pressure", "pressure", "hPa"),
+            ("PM2.5",      "pm25",       "µg/m³"),
+            ("PM10",       "pm10",       "µg/m³"),
+            ("Pressure",   "pressure",   "hPa"),
             ("Visibility", "visibility", "m"),
         ]
         for i, (label, key, unit) in enumerate(labels):
@@ -217,17 +206,18 @@ def render_dashboard():
     metrics = model_info.get("metrics", {})
     if metrics:
         mc1, mc2, mc3, mc4 = st.columns(4)
-        mc1.metric("Model", model_info.get("model_name", "—").replace("_", " ").title())
+        # KEY FIX: use "name" not "model_name" — matches inference.py response structure
+        mc1.metric("Model", model_info.get("name", "—").replace("_", " ").title())
         mc2.metric("RMSE", f"{metrics.get('test_rmse', '—'):.4f}" if isinstance(metrics.get('test_rmse'), (int, float)) else "—")
-        mc3.metric("MAE", f"{metrics.get('test_mae', '—'):.4f}" if isinstance(metrics.get('test_mae'), (int, float)) else "—")
-        mc4.metric("R²", f"{metrics.get('test_r2', '—'):.4f}" if isinstance(metrics.get('test_r2'), (int, float)) else "—")
+        mc3.metric("MAE",  f"{metrics.get('test_mae',  '—'):.4f}" if isinstance(metrics.get('test_mae'),  (int, float)) else "—")
+        mc4.metric("R²",   f"{metrics.get('test_r2',   '—'):.4f}" if isinstance(metrics.get('test_r2'),   (int, float)) else "—")
     else:
         st.caption("Model metrics not available. Train a model first.")
 
     # ── SHAP Feature Importance (Dashboard Summary) ────────────────
     st.subheader("🎯 Feature Importance (SHAP)")
-    shap_dir = Path(NOTEBOOKS_DIR)
-    bar_png = shap_dir / "shap_02_bar_plot.png"
+    shap_dir      = Path(NOTEBOOKS_DIR)
+    bar_png       = shap_dir / "shap_02_bar_plot.png"
     waterfall_files = sorted(shap_dir.glob("shap_03_waterfall_*.png"))
     if bar_png.exists():
         col_left, col_right = st.columns([2, 1])
@@ -255,7 +245,7 @@ def render_forecast():
         return
 
     predictions = result["predictions"]
-    model_info = result["model_info"]          # ← add this line
+    model_info  = result["model_info"]
     st.subheader("📊 Detailed 3-Day Forecast")
 
     rows = []
@@ -263,13 +253,13 @@ def render_forecast():
         p = predictions[label]
         cat, color, _ = aqi_category(p["aqi"])
         rows.append({
-            "Period": label.upper(),
-            "AQI": f"{p['aqi']:.1f}",
-            "Category": cat,
+            "Period":     label.upper(),
+            "AQI":        f"{p['aqi']:.1f}",
+            "Category":   cat,
             "Confidence": p["confidence"].title(),
-            "CI Lower": f"{p.get('ci_lower', p['aqi']*0.95):.1f}",
-            "CI Upper": f"{p.get('ci_upper', p['aqi']*1.05):.1f}",
-            "": "🟢" if p["aqi"] <= 100 else ("🟡" if p["aqi"] <= 150 else ("🟠" if p["aqi"] <= 200 else "🔴")),
+            "CI Lower":   f"{p.get('ci_lower', p['aqi']*0.95):.1f}",
+            "CI Upper":   f"{p.get('ci_upper', p['aqi']*1.05):.1f}",
+            "":           "🟢" if p["aqi"] <= 100 else ("🟡" if p["aqi"] <= 150 else ("🟠" if p["aqi"] <= 200 else "🔴")),
         })
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
@@ -288,10 +278,10 @@ def render_forecast():
     st.plotly_chart(fig, use_container_width=True)
 
     with st.expander("ℹ️ About the Forecast"):
-        forecast_method = result.get('model_info', {}).get('forecast_method', 'Weather-informed')
+        forecast_method = model_info.get('forecast_method', 'Weather-informed')
         st.markdown(f"""
         **Forecasting Method:** {forecast_method}
-        
+
         - **Current (t+0)**: Real-time prediction using latest AQICN pollutants + OpenMeteo weather
         - **24h / 48h / 72h**: TRUE multi-horizon predictions using:
           - OpenMeteo weather forecasts at target time
@@ -300,7 +290,7 @@ def render_forecast():
         - **Confidence intervals**: 95% prediction intervals based on model test RMSE
           - Wider CIs for farther horizons (accounts for increasing uncertainty)
         - **Model**: {model_info.get('name', 'Best model from Hopsworks Model Registry')}
-        
+
         **NOT simple trend scaling** — each prediction uses the ML model independently!
         """)
 
@@ -343,7 +333,7 @@ def render_history():
 
     # Pollutant & weather subplots
     pollutant_cols = ["pm25", "pm10", "o3", "no2", "so2", "co"]
-    weather_cols = ["temperature", "humidity", "wind_speed", "pressure"]
+    weather_cols   = ["temperature", "humidity", "wind_speed", "pressure"]
 
     col1, col2 = st.columns(2)
     with col1:
@@ -374,11 +364,11 @@ def render_history():
     with st.expander("📊 Summary Statistics", expanded=False):
         stats = df["aqi"].describe()
         st.json({
-            "Mean AQI": f"{stats['mean']:.1f}",
+            "Mean AQI":   f"{stats['mean']:.1f}",
             "Median AQI": f"{stats['50%']:.1f}",
-            "Min AQI": f"{stats['min']:.0f}",
-            "Max AQI": f"{stats['max']:.0f}",
-            "Std Dev": f"{stats['std']:.1f}",
+            "Min AQI":    f"{stats['min']:.0f}",
+            "Max AQI":    f"{stats['max']:.0f}",
+            "Std Dev":    f"{stats['std']:.1f}",
             "Data Points": int(stats["count"]),
         })
 
@@ -390,17 +380,16 @@ def render_shap():
     st.subheader("🎯 Feature Importance (SHAP)")
     st.markdown("Global feature importance from SHAP analysis of the trained model.")
 
-    shap_dir = Path(NOTEBOOKS_DIR)
+    shap_dir  = Path(NOTEBOOKS_DIR)
     png_files = sorted(shap_dir.glob("shap_*.png"))
 
     if not png_files:
         st.warning("No SHAP visualizations found. Run the SHAP analysis notebook first.")
         return
 
-    # Summary + bar
-    col1, col2 = st.columns(2)
-    summary_png = shap_dir / "shap_01_summary_plot.png"
-    bar_png = shap_dir / "shap_02_bar_plot.png"
+    col1, col2   = st.columns(2)
+    summary_png  = shap_dir / "shap_01_summary_plot.png"
+    bar_png      = shap_dir / "shap_02_bar_plot.png"
 
     with col1:
         if summary_png.exists():
@@ -409,7 +398,6 @@ def render_shap():
         if bar_png.exists():
             st.image(str(bar_png), caption="Mean |SHAP| (Bar Chart)", use_container_width=True)
 
-    # Dependence plots
     st.subheader("🔬 Feature Interactions")
     dep_files = sorted(shap_dir.glob("shap_04_dependence_*.png"))
     if dep_files:
@@ -420,7 +408,6 @@ def render_shap():
     else:
         st.info("Dependence plots not yet available.")
 
-    # Waterfall samples
     st.subheader("💧 Individual Prediction Explanations")
     waterfall_files = sorted(shap_dir.glob("shap_03_waterfall_*.png"))
     if waterfall_files:
@@ -429,19 +416,16 @@ def render_shap():
             with cols[i]:
                 st.image(str(f), caption=f"Sample {i+1}", use_container_width=True)
 
-    # Alert distribution
     alert_png = shap_dir / "shap_05_alert_distribution.png"
     if alert_png.exists():
         st.subheader("🚨 Alert Distribution")
         st.image(str(alert_png), use_container_width=True)
 
-    # Cross-model comparison
     cross_png = shap_dir / "shap_06_cross_model_comparison.png"
     if cross_png.exists():
         st.subheader("📊 Cross-Model Feature Importance")
         st.image(str(cross_png), use_container_width=True)
 
-    # Alert report
     alert_csv = shap_dir / "shap_alert_report.csv"
     if alert_csv.exists():
         with st.expander("📋 Alert Report", expanded=False):
@@ -454,46 +438,53 @@ def render_shap():
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Model Info Page
+# Model Info Page  — reads from Hopsworks via get_inference()
 # ─────────────────────────────────────────────────────────────────────
 def render_model_info():
     st.subheader("🤖 Model Information")
 
-    md = get_model_metadata()
-    if md is None:
-        st.warning("No trained model found. Run the training pipeline first.")
+    try:
+        result = get_inference()
+    except Exception as e:
+        st.error(f"Failed to load model info: {e}")
         return
 
+    model_info = result["model_info"]
+    metrics    = model_info["metrics"]   # nested dict from inference.py
+
+    # ── Summary JSON ─────────────────────────────────────────────
     st.json({
-        "Model": md["model_name"],
-        "Trained At": md["timestamp"],
-        "Features": len(md["feature_names"]),
-        "Test RMSE": md["metrics"].get("test_rmse", "N/A"),
-        "Test MAE": md["metrics"].get("test_mae", "N/A"),
-        "Test R²": md["metrics"].get("test_r2", "N/A"),
+        "Model":           model_info.get("name",            "N/A"),
+        "Forecast Method": model_info.get("forecast_method", "N/A"),
+        "Generated At":    result.get("generated_at",        "N/A"),
+        "Test R²":         metrics.get("test_r2",            "N/A"),
+        "Test RMSE":       metrics.get("test_rmse",          "N/A"),
+        "Test MAE":        metrics.get("test_mae",           "N/A"),
+        "Val R²":          metrics.get("val_r2",             "N/A"),
+        "Val RMSE":        metrics.get("val_rmse",           "N/A"),
     })
 
-    st.subheader("📋 Feature List")
-    st.write(f"**{len(md['feature_names'])} features** used by the model:")
-    cols = st.columns(3)
-    for i, feat in enumerate(md["feature_names"]):
-        cols[i % 3].markdown(f"- `{feat}`")
+    # ── Metric cards ─────────────────────────────────────────────
+    st.subheader("📊 Model Performance")
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    mc1.metric("Model",     model_info.get("name", "—").replace("_", " ").title())
+    mc2.metric("Test R²",   f"{metrics['test_r2']:.4f}"   if isinstance(metrics.get("test_r2"),   (int, float)) else "—")
+    mc3.metric("Test RMSE", f"{metrics['test_rmse']:.4f}" if isinstance(metrics.get("test_rmse"), (int, float)) else "—")
+    mc4.metric("Test MAE",  f"{metrics['test_mae']:.4f}"  if isinstance(metrics.get("test_mae"),  (int, float)) else "—")
 
-    comparison_csv = os.path.join(MODELS_DIR, "model_comparison.csv")
-    if os.path.exists(comparison_csv):
-        st.subheader("📊 Model Comparison")
-        comp_df = pd.read_csv(comparison_csv)
-        st.dataframe(comp_df, use_container_width=True, hide_index=True)
+    v1, v2 = st.columns(2)
+    v1.metric("Val R²",   f"{metrics['val_r2']:.4f}"   if isinstance(metrics.get("val_r2"),   (int, float)) else "—")
+    v2.metric("Val RMSE", f"{metrics['val_rmse']:.4f}" if isinstance(metrics.get("val_rmse"), (int, float)) else "—")
 
-        fig = go.Figure()
-        for _, row in comp_df.iterrows():
-            fig.add_trace(go.Bar(
-                name=row["Model"], x=["RMSE", "R²"],
-                y=[row["Test RMSE"], row["Test R²"]],
-            ))
-        fig.update_layout(barmode="group", height=300, margin=dict(l=0, r=0, t=0, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+    # ── Forecast method banner ────────────────────────────────────
+    st.subheader("🔮 Forecast Method")
+    method = model_info.get("forecast_method", "N/A")
+    if method == "Weather-informed":
+        st.success(f"✅ **{method}** — Using OpenMeteo weather forecasts for 24h / 48h / 72h predictions")
+    else:
+        st.warning(f"⚠️ **{method}** — Weather forecast unavailable; using current conditions for all horizons")
 
+    # ── SHAP report (optional) ────────────────────────────────────
     shap_report = os.path.join(NOTEBOOKS_DIR, "shap_summary_report.txt")
     if os.path.exists(shap_report):
         with st.expander("📝 SHAP Summary Report", expanded=False):
