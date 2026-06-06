@@ -497,6 +497,60 @@ def render_dashboard():
                 apply_chart_theme(fig_s, height=260)
                 st.plotly_chart(fig_s, use_container_width=True)
 
+    with col_hist:
+        with st.container(border=True):
+            st.markdown("#### Historical AQI trends (in 7 days)")
+            df_hist = get_history_data(7)
+            if not df_hist.empty and "aqi" in df_hist.columns:
+                fig_h = go.Figure()
+                fig_h.add_trace(go.Scatter(
+                    x=df_hist["timestamp"], y=df_hist["aqi"],
+                    mode="lines+markers", name="AQI",
+                    line=dict(color="#3b82f6", width=2),
+                    marker=dict(size=4),
+                ))
+                if "aqi_rolling_24h" in df_hist.columns:
+                    fig_h.add_trace(go.Scatter(
+                        x=df_hist["timestamp"], y=df_hist["aqi_rolling_24h"],
+                        mode="lines", name="MSE",
+                        line=dict(color="#f97316", width=2, dash="dot"),
+                    ))
+                apply_chart_theme(fig_h, height=260)
+                fig_h.update_layout(
+                    legend=dict(orientation="v", x=1.01, y=1),
+                    yaxis_title="AQI", xaxis_title="Days",
+                )
+                st.plotly_chart(fig_h, use_container_width=True)
+            else:
+                # Placeholder
+                days_x = list(range(1, 8))
+                sample_aqi = [180, 240, 160, 300, 210, 170, 190]
+                sample_mse = [160, 200, 150, 260, 180, 155, 175]
+                sample_rmse= [140, 180, 130, 240, 160, 140, 160]
+                sample_worse=[200, 260, 180, 320, 240, 200, 220]
+                sample_worst=[220, 280, 200, 350, 260, 220, 240]
+                fig_h = go.Figure()
+                for name, vals, clr in [
+                    ("AQI",   sample_aqi,  "#3b82f6"),
+                    ("MSE",   sample_mse,  "#ef4444"),
+                    ("RMSE",  sample_rmse, "#22c55e"),
+                    ("Worse", sample_worse,"#f97316"),
+                    ("Worst", sample_worst,"#a855f7"),
+                ]:
+                    fig_h.add_trace(go.Scatter(
+                        x=days_x, y=vals, mode="lines+markers", name=name,
+                        line=dict(color=clr, width=1.8),
+                        marker=dict(size=5),
+                    ))
+                apply_chart_theme(fig_h, height=260)
+                fig_h.update_layout(
+                    legend=dict(orientation="v", x=1.01, y=1),
+                    yaxis_title="AQI", xaxis_title="Days",
+                )
+                st.plotly_chart(fig_h, use_container_width=True)
+
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+
     # ── Row 3: Weather Conditions | Pollutant Levels ─────────────
     col_wc, col_pl = st.columns(2)
 
