@@ -186,13 +186,17 @@ def apply_chart_theme(fig, height=320):
 # ─────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=1800)
 def load_shap_importance() -> pd.DataFrame:
-    """Fetch latest SHAP importance CSV from GitHub Releases."""
     try:
-        resp = requests.get(SHAP_CSV_URL, timeout=15)
+        resp = requests.get(
+            SHAP_CSV_URL,
+            timeout=15,
+            allow_redirects=True,  # ← GitHub releases redirect karte hain
+            headers={"Accept": "application/octet-stream"},
+        )
         if resp.status_code == 200:
             return pd.read_csv(io.StringIO(resp.text))
         else:
-            st.warning(f"Could not fetch SHAP data (HTTP {resp.status_code}). Check GitHub Release tag.")
+            st.warning(f"Could not fetch SHAP data (HTTP {resp.status_code}).")
             return pd.DataFrame()
     except Exception as e:
         st.warning(f"SHAP data fetch failed: {e}")
