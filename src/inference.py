@@ -491,7 +491,8 @@ def run(models_dir: str = "models") -> Dict:
         raise ValueError("❌ Failed to fetch weather data from OpenMeteo")
     
     # Extract latest weather record
-    weather_data = weather_df.iloc[-1].to_dict()
+    karachi_hour = pd.Timestamp.now(tz='Asia/Karachi').hour
+    weather_data = weather_df[weather_df['timestamp'].dt.hour == karachi_hour].iloc[0].to_dict()
     logger.info(f"✅ Current — AQI: {aqi_data['aqi']}, Temp: {weather_data.get('temperature')}°C")
 
     # ── Step 3: Fetch weather forecasts ───────────────────────────────────────
