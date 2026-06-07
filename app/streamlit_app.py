@@ -5,7 +5,7 @@ No local files. SHAP from GitHub Releases. Charts from CSV data.
 
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import io
 
 import pandas as pd
@@ -493,10 +493,9 @@ def get_history_data(days: int) -> pd.DataFrame:
         if df.empty:
             return pd.DataFrame()
 
-        # Filter by days
         if "timestamp" in df.columns:
-            df["timestamp"] = pd.to_datetime(df["timestamp"])
-            cutoff = datetime.now() - timedelta(days=days)
+            df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)  # ← UTC aware
+            cutoff = datetime.now(tz=timezone.utc) - timedelta(days=days)  # ← UTC aware
             df = df[df["timestamp"] >= cutoff]
 
         return df.sort_values("timestamp").reset_index(drop=True)
