@@ -95,7 +95,7 @@ section[data-testid="stSidebar"] label {
     font-family: 'IBM Plex Sans', sans-serif !important;
 }
 
-/* Sidebar collapse/expand button */
+/* Sidebar collapse/expand button — fix keyboard_double_arrow_left icon */
 [data-testid="collapsedControl"] {
     background-color: #161b22 !important;
     border: 1px solid #21262d !important;
@@ -107,6 +107,21 @@ section[data-testid="stSidebar"] label {
 [data-testid="collapsedControl"]:hover {
     background-color: #21262d !important;
     border-color: #ff4444 !important;
+}
+/* The icon itself — Streamlit uses Material Icons font for this button */
+[data-testid="collapsedControl"] span,
+[data-testid="stSidebarCollapsedControl"] span {
+    font-family: 'Material Icons', 'Material Icons Outlined' !important;
+    color: #8b949e !important;
+    font-size: 20px !important;
+}
+/* Sidebar collapse button that sits outside sidebar */
+button[data-testid="stBaseButton-header"],
+[data-testid="stSidebarNavCollapseIcon"] {
+    color: #8b949e !important;
+}
+[data-testid="stSidebarNavCollapseIcon"] svg {
+    fill: #8b949e !important;
 }
 
 /* Sidebar nav radio */
@@ -160,10 +175,15 @@ section[data-testid="stSidebar"] .stButton > button {
     width: 100% !important;
     letter-spacing: 0.3px !important;
 }
+section[data-testid="stSidebar"] .stButton > button span,
+section[data-testid="stSidebar"] .stButton > button p {
+    color: #ffffff !important;
+}
 section[data-testid="stSidebar"] .stButton > button:hover {
     background: #cc0000 !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 14px rgba(255, 68, 68, 0.35) !important;
+    color: #ffffff !important;
 }
 
 /* Sidebar selectbox */
@@ -609,7 +629,9 @@ button[kind="primary"]:hover {
    JSON DISPLAY
    ══════════════════════════════════════════════════════════ */
 div[data-testid="stJson"],
-div[data-testid="stJson"] > div {
+div[data-testid="stJson"] > div,
+div[data-testid="stJson"] pre,
+div[data-testid="stJson"] code {
     background: #161b22 !important;
     border-radius: 8px !important;
     border: 1px solid #21262d !important;
@@ -617,12 +639,23 @@ div[data-testid="stJson"] > div {
     font-family: 'IBM Plex Mono', monospace !important;
     color: #c9d1d9 !important;
 }
-/* JSON token colors */
-div[data-testid="stJson"] .string { color: #79c0ff !important; }
+/* JSON token colors — covers both class-based and span-based renderers */
+div[data-testid="stJson"] span { color: #c9d1d9 !important; }
+div[data-testid="stJson"] .string,
+div[data-testid="stJson"] span[style*="color: rgb(0"] { color: #79c0ff !important; }
 div[data-testid="stJson"] .number { color: #f0883e !important; }
 div[data-testid="stJson"] .boolean { color: #ff7b72 !important; }
 div[data-testid="stJson"] .null { color: #8b949e !important; }
 div[data-testid="stJson"] .key { color: #d2a8ff !important; }
+/* Override any inline dark/black color styles Streamlit injects */
+div[data-testid="stJson"] [style*="color: black"],
+div[data-testid="stJson"] [style*="color:#000"],
+div[data-testid="stJson"] [style*="color: #000"],
+div[data-testid="stJson"] [style*="color:black"],
+div[data-testid="stJson"] [style*="color: rgb(0, 0, 0)"],
+div[data-testid="stJson"] [style*="color:rgb(0,0,0)"] {
+    color: #c9d1d9 !important;
+}
 
 /* ══════════════════════════════════════════════════════════
    PLOTLY CHARTS — force dark bg
