@@ -47,98 +47,351 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────────────
-# CSS
+# CSS — Dark Modern Theme
 # ─────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+/* ── Root tokens ── */
+:root {
+    --bg-base:        #0d0f14;
+    --bg-surface:     #13161e;
+    --bg-card:        #181c26;
+    --bg-card-hover:  #1e2230;
+    --bg-input:       #1a1e28;
+    --border:         #252a38;
+    --border-subtle:  #1e2230;
+    --text-primary:   #e8eaf0;
+    --text-secondary: #8b91a8;
+    --text-muted:     #555c72;
+    --accent-green:   #22c55e;
+    --accent-yellow:  #eab308;
+    --accent-orange:  #f97316;
+    --accent-red:     #ef4444;
+    --accent-purple:  #a855f7;
+    --accent-blue:    #3b82f6;
+    --accent-cyan:    #06b6d4;
+    --glow-green:     rgba(34,197,94,0.15);
+    --glow-yellow:    rgba(234,179,8,0.15);
+    --glow-blue:      rgba(59,130,246,0.12);
+}
+
+/* ── Global reset ── */
 html, body, [class*="css"] {
-    font-family: 'Sora', sans-serif !important;
-    background-color: #f0f2f5 !important;
-    color: #1a1d23 !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    background-color: var(--bg-base) !important;
+    color: var(--text-primary) !important;
 }
+
+/* ── Main container ── */
 .main .block-container {
-    padding: 1.8rem 2rem 3rem 2rem !important;
-    max-width: 1320px !important;
-    background-color: #f0f2f5 !important;
+    padding: 1.8rem 2.2rem 3rem 2.2rem !important;
+    max-width: 1380px !important;
+    background-color: var(--bg-base) !important;
 }
+
+/* ── Sidebar ── */
 section[data-testid="stSidebar"] {
-    background: #1a1d23 !important;
-    border-right: 1px solid #2a2d35 !important;
-    min-width: 230px !important;
+    background: var(--bg-surface) !important;
+    border-right: 1px solid var(--border) !important;
+    min-width: 240px !important;
 }
-section[data-testid="stSidebar"] * { color: #c8ccd4 !important; }
+section[data-testid="stSidebar"] * {
+    color: var(--text-secondary) !important;
+}
 section[data-testid="stSidebar"] .stRadio label {
-    font-size: 13px !important; font-weight: 500 !important;
-    padding: 6px 10px !important; border-radius: 8px !important;
-    cursor: pointer !important; transition: background 0.15s !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 7px 12px !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.15s !important;
+    color: var(--text-secondary) !important;
 }
 section[data-testid="stSidebar"] .stRadio label:hover {
-    background: rgba(255,255,255,0.07) !important; color: #fff !important;
+    background: rgba(255,255,255,0.06) !important;
+    color: var(--text-primary) !important;
 }
-section[data-testid="stSidebar"] hr { border-color: #2a2d35 !important; }
+section[data-testid="stSidebar"] hr {
+    border-color: var(--border) !important;
+    opacity: 0.5 !important;
+}
 section[data-testid="stSidebar"] .stButton button {
-    background: #2e3240 !important; color: #c8ccd4 !important;
-    border: 1px solid #3a3e4a !important; border-radius: 8px !important;
-    font-size: 13px !important; font-weight: 500 !important;
+    background: var(--bg-card) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
     transition: all 0.15s !important;
 }
 section[data-testid="stSidebar"] .stButton button:hover {
-    background: #3a3e4a !important; color: #fff !important;
+    background: var(--bg-card-hover) !important;
+    color: var(--text-primary) !important;
+    border-color: rgba(255,255,255,0.12) !important;
 }
+
+/* ── Typography ── */
 h1 {
-    font-size: 22px !important; font-weight: 700 !important;
-    color: #1a1d23 !important; letter-spacing: -0.5px !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    letter-spacing: -0.5px !important;
     margin-bottom: 0.2rem !important;
 }
-h2 { font-size: 20px !important; font-weight: 700 !important; color: #1a1d23 !important; letter-spacing: -0.4px !important; }
-h3, h4 {
-    font-size: 14px !important; font-weight: 600 !important;
-    color: #4a5060 !important; text-transform: uppercase !important;
-    letter-spacing: 0.6px !important; margin-bottom: 0.8rem !important;
+h2 {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    letter-spacing: -0.4px !important;
 }
+h3, h4 {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    margin-bottom: 0.9rem !important;
+}
+
+/* ── Cards / containers ── */
 div[data-testid="stVerticalBlockBorderWrapper"] {
-    background: #ffffff !important; border: 1px solid #e4e7ed !important;
-    border-radius: 16px !important; padding: 1.4rem 1.6rem !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04) !important;
-    transition: box-shadow 0.2s ease, transform 0.2s ease !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+    padding: 1.4rem 1.6rem !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.3) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.07) !important;
-    transform: translateY(-1px) !important;
+    border-color: rgba(255,255,255,0.1) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 12px 32px rgba(0,0,0,0.4) !important;
 }
+
+/* ── Metrics ── */
 div[data-testid="stMetricLabel"] p {
-    font-size: 11px !important; text-transform: uppercase !important;
-    letter-spacing: 0.8px !important; color: #8a9099 !important; font-weight: 600 !important;
+    font-size: 10px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    color: var(--text-muted) !important;
+    font-weight: 600 !important;
 }
 div[data-testid="stMetricValue"] {
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 21px !important; font-weight: 500 !important; color: #1a1d23 !important;
+    font-size: 22px !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
 }
+
+/* ── Alerts ── */
 div[data-testid="stAlert"] {
-    border-radius: 12px !important; border-width: 1px !important;
-    font-size: 13px !important; font-weight: 500 !important; padding: 0.7rem 1rem !important;
+    border-radius: 12px !important;
+    border-width: 1px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 0.75rem 1.1rem !important;
+    background: var(--bg-card) !important;
 }
-div[data-testid="stSelectbox"] > div, div[data-baseweb="select"] {
-    border-radius: 10px !important; border-color: #e4e7ed !important;
-    font-size: 13px !important; background: #f8f9fb !important;
+
+/* ── Selects ── */
+div[data-testid="stSelectbox"] > div,
+div[data-baseweb="select"] {
+    border-radius: 10px !important;
+    border-color: var(--border) !important;
+    font-size: 13px !important;
+    background: var(--bg-input) !important;
+    color: var(--text-primary) !important;
 }
-div[data-testid="stDataFrame"] { border-radius: 12px !important; overflow: hidden !important; border: 1px solid #e4e7ed !important; }
+
+/* ── DataFrames ── */
+div[data-testid="stDataFrame"] {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--border) !important;
+}
 div[data-testid="stDataFrame"] table thead tr th {
-    background: #f4f6f9 !important; font-size: 11px !important;
-    text-transform: uppercase !important; letter-spacing: 0.6px !important;
-    color: #8a9099 !important; font-weight: 600 !important;
+    background: var(--bg-surface) !important;
+    font-size: 10px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+    color: var(--text-muted) !important;
+    font-weight: 600 !important;
 }
-div[data-testid="stDataFrame"] table tbody tr:nth-child(even) { background: #fafbfc !important; }
+div[data-testid="stDataFrame"] table tbody tr td {
+    color: var(--text-primary) !important;
+    background: var(--bg-card) !important;
+}
+div[data-testid="stDataFrame"] table tbody tr:nth-child(even) td {
+    background: var(--bg-surface) !important;
+}
+
+/* ── Expanders ── */
 details {
-    border-radius: 12px !important; border: 1px solid #e4e7ed !important;
-    background: #fff !important; padding: 0.2rem !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--border) !important;
+    background: var(--bg-card) !important;
+    padding: 0.2rem !important;
 }
-details summary { font-size: 13px !important; font-weight: 600 !important; color: #4a5060 !important; padding: 0.6rem 0.8rem !important; }
-hr { border-color: #e8eaee !important; margin: 1rem 0 !important; }
-small, .stCaption, [data-testid="stCaptionContainer"] p { color: #8a9099 !important; font-size: 11px !important; }
-div[data-testid="stJson"] { background: #f8f9fb !important; border-radius: 10px !important; border: 1px solid #e4e7ed !important; font-size: 12px !important; }
+details summary {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    padding: 0.7rem 0.9rem !important;
+}
+
+/* ── Dividers ── */
+hr {
+    border-color: var(--border) !important;
+    opacity: 0.5 !important;
+    margin: 1rem 0 !important;
+}
+
+/* ── Captions / small text ── */
+small, .stCaption, [data-testid="stCaptionContainer"] p {
+    color: var(--text-muted) !important;
+    font-size: 11px !important;
+}
+
+/* ── JSON viewer ── */
+div[data-testid="stJson"] {
+    background: var(--bg-surface) !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+    font-size: 12px !important;
+}
+
+/* ── Forecast day card ── */
+.forecast-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 16px 18px 16px;
+    text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+.forecast-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.12);
+}
+.forecast-card .fc-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+.forecast-card .fc-aqi {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 10px;
+}
+.forecast-card .fc-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+.forecast-card .fc-glow {
+    position: absolute;
+    top: -30px; left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.18;
+    pointer-events: none;
+}
+
+/* ── AQI big badge ── */
+.aqi-hero {
+    background: var(--bg-surface);
+    border-radius: 18px;
+    padding: 28px 20px 24px 20px;
+    text-align: center;
+    border: 1.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+}
+.aqi-hero-glow {
+    position: absolute;
+    top: -40px; left: 50%;
+    transform: translateX(-50%);
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.2;
+    pointer-events: none;
+}
+.aqi-hero-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 72px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 10px;
+}
+.aqi-hero-label {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+}
+.aqi-hero-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    max-width: 180px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+/* ── Metric mini card ── */
+.metric-mini {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+}
+.metric-mini-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+.metric-mini-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+}
+
+/* ── Section header ── */
+.section-header {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.2px !important;
+    color: var(--text-muted) !important;
+    margin-bottom: 1rem !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -169,23 +422,23 @@ def apply_chart_theme(fig, height=320):
         height=height,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family="Sora, sans-serif", size=11, color="#4a5060"),
+        font=dict(family="Space Grotesk, sans-serif", size=11, color="#8b91a8"),
         hovermode="x unified",
         legend=dict(
-            bgcolor='rgba(255,255,255,0.9)',
-            bordercolor='#e4e7ed', borderwidth=1,
-            font=dict(size=11),
+            bgcolor='rgba(24,28,38,0.95)',
+            bordercolor='#252a38', borderwidth=1,
+            font=dict(size=11, color="#8b91a8"),
         ),
     )
     fig.update_xaxes(
-        showgrid=True, gridcolor='#f0f2f5', gridwidth=1,
+        showgrid=True, gridcolor='#1e2230', gridwidth=1,
         zeroline=False, showline=False,
-        tickfont=dict(size=10, color="#8a9099"),
+        tickfont=dict(size=10, color="#555c72"),
     )
     fig.update_yaxes(
-        showgrid=True, gridcolor='#f0f2f5', gridwidth=1,
+        showgrid=True, gridcolor='#1e2230', gridwidth=1,
         zeroline=False, showline=False,
-        tickfont=dict(size=10, color="#8a9099"),
+        tickfont=dict(size=10, color="#555c72"),
     )
     return fig
 
@@ -198,7 +451,7 @@ def load_shap_importance() -> pd.DataFrame:
         resp = requests.get(
             SHAP_CSV_URL,
             timeout=15,
-            allow_redirects=True,  # ← GitHub releases redirect karte hain
+            allow_redirects=True,
             headers={"Accept": "application/octet-stream"},
         )
         if resp.status_code == 200:
@@ -214,16 +467,10 @@ def load_shap_importance() -> pd.DataFrame:
 # Beautiful SHAP Charts — built from CSV
 # ─────────────────────────────────────────────────────────────────────
 def render_shap_charts(df: pd.DataFrame):
-    """
-    Renders 3 stunning Plotly SHAP charts from importance CSV.
-    Expects columns: feature, importance (and optionally: std, positive, negative)
-    Auto-detects column names.
-    """
     if df.empty:
         st.error("No SHAP data available. Make sure GitHub Actions has pushed the latest release.")
         return
 
-    # ── Auto-detect columns ───────────────────────────────────────
     cols = [c.lower() for c in df.columns]
     feat_col = df.columns[cols.index("feature")]       if "feature"    in cols else df.columns[0]
     imp_col  = df.columns[cols.index("importance")]    if "importance" in cols else df.columns[1]
@@ -238,188 +485,158 @@ def render_shap_charts(df: pd.DataFrame):
     top_n = min(15, len(df))
     df_top = df.head(top_n)
 
-    # ── Color scale: green → yellow → red by rank ────────────────
     norm   = df_top[imp_col] / df_top[imp_col].max()
     colors = [
         f"rgba({int(239 * v + 34 * (1-v))}, {int(68 * v + 197 * (1-v))}, {int(68 * v + 94 * (1-v))}, 0.85)"
         for v in norm
     ]
 
-    # ════════════════════════════════════════════════════════════════
-    # Chart 1 — Animated Horizontal Bar (Hero Chart)
-    # ════════════════════════════════════════════════════════════════
+    # Chart 1 — Horizontal Bar
     fig1 = go.Figure()
-
-    # Background glow bars
     fig1.add_trace(go.Bar(
         y=df_top[feat_col][::-1],
         x=df_top[imp_col][::-1] * 1.05,
         orientation="h",
-        marker=dict(color="rgba(234,179,8,0.06)", line=dict(width=0)),
+        marker=dict(color="rgba(234,179,8,0.04)", line=dict(width=0)),
         showlegend=False,
         hoverinfo="skip",
     ))
-
-    # Main bars
     fig1.add_trace(go.Bar(
         y=df_top[feat_col][::-1],
         x=df_top[imp_col][::-1],
         orientation="h",
-        marker=dict(
-            color=colors[::-1],
-            line=dict(width=0),
-        ),
+        marker=dict(color=colors[::-1], line=dict(width=0)),
         text=[f"  {v:.4f}" for v in df_top[imp_col][::-1]],
         textposition="outside",
-        textfont=dict(size=10, color="#4a5060", family="JetBrains Mono"),
+        textfont=dict(size=10, color="#8b91a8", family="JetBrains Mono"),
         hovertemplate="<b>%{y}</b><br>SHAP Importance: %{x:.5f}<extra></extra>",
     ))
-
-    # Error bars if std available
     if std_col:
         fig1.data[1].error_x = dict(
             type="data",
             array=df_top[std_col][::-1].tolist(),
             visible=True,
-            color="rgba(100,100,100,0.3)",
+            color="rgba(100,100,100,0.25)",
             thickness=1.5,
             width=4,
         )
-
     fig1.update_layout(
         barmode="overlay",
         height=420,
         margin=dict(l=10, r=80, t=30, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Sora, sans-serif", size=11, color="#4a5060"),
+        font=dict(family="Space Grotesk, sans-serif", size=11, color="#8b91a8"),
         showlegend=False,
         xaxis=dict(
             title="Mean |SHAP Value|",
-            showgrid=True, gridcolor="#f0f2f5",
-            zeroline=True, zerolinecolor="#e4e7ed", zerolinewidth=1.5,
-            tickfont=dict(size=9, family="JetBrains Mono"),
+            showgrid=True, gridcolor="#1e2230",
+            zeroline=True, zerolinecolor="#252a38", zerolinewidth=1.5,
+            tickfont=dict(size=9, family="JetBrains Mono", color="#555c72"),
         ),
         yaxis=dict(
             showgrid=False,
-            tickfont=dict(size=11, color="#1a1d23"),
+            tickfont=dict(size=11, color="#e8eaf0"),
         ),
     )
 
-    # ════════════════════════════════════════════════════════════════
-    # Chart 2 — Radial / Polar Importance (Attention-grabbing)
-    # ════════════════════════════════════════════════════════════════
+    # Chart 2 — Polar
     top8 = df_top.head(8)
     norm8 = top8[imp_col] / top8[imp_col].max()
-
     fig2 = go.Figure()
-
     fig2.add_trace(go.Scatterpolar(
         r=norm8[imp_col] if imp_col in norm8 else top8[imp_col],
         theta=top8[feat_col],
         fill="toself",
-        fillcolor="rgba(234,179,8,0.15)",
+        fillcolor="rgba(234,179,8,0.08)",
         line=dict(color="#eab308", width=2.5),
         marker=dict(
             size=norm8 * 14 + 6,
             color=top8[imp_col],
             colorscale=[[0, "#22c55e"], [0.5, "#eab308"], [1, "#ef4444"]],
             showscale=False,
-            line=dict(color="white", width=2),
+            line=dict(color="#13161e", width=2),
         ),
         text=top8[feat_col],
         hovertemplate="<b>%{text}</b><br>Importance: %{r:.5f}<extra></extra>",
         name="SHAP Importance",
     ))
-
     fig2.update_layout(
         polar=dict(
-            bgcolor="rgba(248,249,251,0.8)",
+            bgcolor="rgba(19,22,30,0.8)",
             radialaxis=dict(
                 visible=True,
                 showticklabels=True,
-                tickfont=dict(size=8, color="#8a9099", family="JetBrains Mono"),
-                gridcolor="#e4e7ed",
-                linecolor="#e4e7ed",
+                tickfont=dict(size=8, color="#555c72", family="JetBrains Mono"),
+                gridcolor="#252a38",
+                linecolor="#252a38",
             ),
             angularaxis=dict(
-                tickfont=dict(size=10, color="#1a1d23", family="Sora"),
-                gridcolor="#e8eaee",
-                linecolor="#e4e7ed",
+                tickfont=dict(size=10, color="#e8eaf0", family="Space Grotesk"),
+                gridcolor="#1e2230",
+                linecolor="#252a38",
             ),
         ),
         height=380,
         margin=dict(l=40, r=40, t=30, b=30),
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Sora, sans-serif", size=11),
+        font=dict(family="Space Grotesk, sans-serif", size=11),
         showlegend=False,
     )
 
-    # ════════════════════════════════════════════════════════════════
-    # Chart 3 — Waterfall-style Cumulative Contribution
-    # ════════════════════════════════════════════════════════════════
+    # Chart 3 — Waterfall / Cumulative
     df_wf = df_top.head(10).copy()
     df_wf["cumulative"] = df_wf[imp_col].cumsum()
     df_wf["pct"]        = (df_wf[imp_col] / df_wf[imp_col].sum() * 100).round(1)
-
     wf_colors = [
         "#22c55e" if i < 3 else "#eab308" if i < 6 else "#f97316" if i < 8 else "#ef4444"
         for i in range(len(df_wf))
     ]
-
     fig3 = go.Figure()
-
-    # Cumulative area
     fig3.add_trace(go.Scatter(
         x=df_wf[feat_col],
         y=df_wf["cumulative"],
         mode="lines+markers",
         fill="tozeroy",
-        fillcolor="rgba(59,130,246,0.08)",
+        fillcolor="rgba(59,130,246,0.06)",
         line=dict(color="#3b82f6", width=2.5, dash="dot"),
-        marker=dict(size=7, color="#3b82f6", line=dict(color="white", width=2)),
+        marker=dict(size=7, color="#3b82f6", line=dict(color="#13161e", width=2)),
         name="Cumulative",
         yaxis="y2",
         hovertemplate="<b>%{x}</b><br>Cumulative: %{y:.5f}<extra></extra>",
     ))
-
-    # Individual contribution bars
     fig3.add_trace(go.Bar(
         x=df_wf[feat_col],
         y=df_wf[imp_col],
-        marker=dict(
-            color=wf_colors,
-            line=dict(width=0),
-            opacity=0.85,
-        ),
+        marker=dict(color=wf_colors, line=dict(width=0), opacity=0.85),
         text=[f"{p}%" for p in df_wf["pct"]],
         textposition="outside",
-        textfont=dict(size=9, color="#4a5060", family="JetBrains Mono"),
+        textfont=dict(size=9, color="#8b91a8", family="JetBrains Mono"),
         name="Contribution",
         hovertemplate="<b>%{x}</b><br>Importance: %{y:.5f}<br>Share: %{text}<extra></extra>",
     ))
-
     fig3.update_layout(
         height=360,
         margin=dict(l=10, r=60, t=30, b=80),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Sora, sans-serif", size=11, color="#4a5060"),
+        font=dict(family="Space Grotesk, sans-serif", size=11, color="#8b91a8"),
         barmode="group",
         legend=dict(
             orientation="h", x=0, y=-0.25,
-            bgcolor="rgba(255,255,255,0.9)",
-            bordercolor="#e4e7ed", borderwidth=1,
+            bgcolor="rgba(19,22,30,0.9)",
+            bordercolor="#252a38", borderwidth=1,
+            font=dict(color="#8b91a8"),
         ),
         xaxis=dict(
             tickangle=-35,
-            tickfont=dict(size=9, color="#4a5060"),
+            tickfont=dict(size=9, color="#555c72"),
             showgrid=False,
         ),
         yaxis=dict(
             title="SHAP Importance",
-            showgrid=True, gridcolor="#f0f2f5",
-            tickfont=dict(size=9, family="JetBrains Mono"),
+            showgrid=True, gridcolor="#1e2230",
+            tickfont=dict(size=9, family="JetBrains Mono", color="#555c72"),
         ),
         yaxis2=dict(
             title="Cumulative",
@@ -436,12 +653,12 @@ def render_shap_charts(df: pd.DataFrame):
 # Sidebar
 # ─────────────────────────────────────────────────────────────────────
 st.sidebar.markdown("""
-<div style='padding:1.2rem 0.4rem 1rem 0.4rem;'>
+<div style='padding:1.4rem 0.4rem 1rem 0.4rem;'>
     <div style='display:flex; align-items:center; gap:10px; margin-bottom:6px;'>
-        <span style='font-size:22px;'>🌍</span>
+        <span style='font-size:24px;'>🌍</span>
         <div>
-            <div style='font-size:15px; font-weight:700; color:#fff; letter-spacing:-0.3px;'>AQI Predictor</div>
-            <div style='font-size:11px; color:#666; font-weight:500;'><b style="color:#aaa">Karachi, Pakistan</b></div>
+            <div style='font-size:15px; font-weight:700; color:#e8eaf0; letter-spacing:-0.3px; font-family:"Space Grotesk",sans-serif;'>Hawa Alert</div>
+            <div style='font-size:11px; color:#555c72; font-weight:600; letter-spacing:0.5px; text-transform:uppercase;'>Karachi · Pakistan</div>
         </div>
     </div>
 </div>
@@ -456,7 +673,7 @@ page = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("<div style='font-size:11px;color:#555;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;font-weight:600;'>History window</div>", unsafe_allow_html=True)
+st.sidebar.markdown("<div style='font-size:10px;color:#555c72;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;font-weight:700;'>History Window</div>", unsafe_allow_html=True)
 history_days = st.sidebar.selectbox("History Window", [7, 30, 90], index=1, label_visibility="collapsed")
 
 st.sidebar.markdown("---")
@@ -465,7 +682,7 @@ if st.sidebar.button("🔄 Refresh Data", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.caption(f"Last updated\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+st.sidebar.caption(f"Updated\n{datetime.now().strftime('%Y-%m-%d %H:%M UTC')}")
 
 # ─────────────────────────────────────────────────────────────────────
 # Cache Helpers
@@ -477,7 +694,6 @@ def get_inference():
 
 @st.cache_data(ttl=300)
 def get_history_data(days: int) -> pd.DataFrame:
-    """Directly connect to Hopsworks Feature Store and read from Feature Group."""
     try:
         project = hopsworks.login(
             api_key_value=HOPSWORKS_API_KEY,
@@ -489,17 +705,13 @@ def get_history_data(days: int) -> pd.DataFrame:
             version=FEATURE_GROUP_VERSION,
         )
         df = fg.read()
-
         if df.empty:
             return pd.DataFrame()
-
         if "timestamp" in df.columns:
-            df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)  # ← UTC aware
-            cutoff = datetime.now(tz=timezone.utc) - timedelta(days=days)  # ← UTC aware
+            df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+            cutoff = datetime.now(tz=timezone.utc) - timedelta(days=days)
             df = df[df["timestamp"] >= cutoff]
-
         return df.sort_values("timestamp").reset_index(drop=True)
-
     except Exception as e:
         st.warning(f"Hopsworks Feature Store connection failed: {e}")
         return pd.DataFrame()
@@ -523,115 +735,97 @@ def render_dashboard():
     current_aqi = predictions["current"]["aqi"]
     cat, color, desc = aqi_category(current_aqi)
 
+    # ── Page header ──────────────────────────────────────────────
     st.markdown(f"""
-    <div style='margin-bottom:1.4rem;'>
-        <h1 style='margin:0 0 4px 0;'>Hawa Alert AQI Predictor — Karachi Dashboard</h1>
-        <p style='color:#8a9099; font-size:13px; margin:0;'>Real-time air quality monitoring & ML forecasting · Karachi, Pakistan</p>
+    <div style='margin-bottom:1.6rem;'>
+        <h1 style='margin:0 0 5px 0; font-family:"Space Grotesk",sans-serif;'>Hawa Alert — AQI Dashboard</h1>
+        <p style='color:#555c72; font-size:12px; margin:0; letter-spacing:0.3px;'>
+            Real-time air quality monitoring & ML forecasting · Karachi, Pakistan
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
+    # ── Alert banner ─────────────────────────────────────────────
     if current_aqi > 150:
         level = "🔴 RED ALERT" if current_aqi > 200 else "🟠 ORANGE ALERT"
         st.error(f"**{level} — AQI {current_aqi:.0f} ({cat}):** {desc}")
     elif current_aqi > 100:
         st.warning(f"**🟡 CAUTION — AQI {current_aqi:.0f} ({cat}):** {desc}")
     else:
-        st.success(f"**✅ Health Alert** — Air quality is satisfactory.")
+        st.success(f"**✅ Good Air Quality** — {desc}")
 
-    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
 
-    col_aqi, col_weather, col_forecast = st.columns([1.1, 1.1, 1.5])
+    # ── TOP ROW: AQI Hero + Weather + 3-Day Forecast cards ───────
+    col_aqi, col_weather, col_fc = st.columns([1.0, 1.0, 2.4])
 
     with col_aqi:
         with st.container(border=True):
             st.markdown("#### Current AQI")
-            badge_bg = color
-            st.markdown(
-                f"""<div style='
-                    background: linear-gradient(135deg, {badge_bg}22 0%, {badge_bg}11 100%);
-                    border: 2px solid {badge_bg}55; border-radius: 14px;
-                    padding: 22px 16px 18px 16px; text-align: center; margin-bottom: 14px;
-                '>
-                    <div style='font-size:54px; font-weight:700; color:{badge_bg};
-                                font-family:"JetBrains Mono",monospace; line-height:1;'>{current_aqi:.0f}</div>
-                    <div style='font-size:13px; font-weight:600; color:{badge_bg};
-                                margin-top:8px; letter-spacing:0.5px;'>{cat}</div>
-                </div>""",
-                unsafe_allow_html=True,
-            )
+            st.markdown(f"""
+            <div class='aqi-hero' style='border-color:{color}33;'>
+                <div class='aqi-hero-glow' style='background:{color};'></div>
+                <div class='aqi-hero-number' style='color:{color};'>{current_aqi:.0f}</div>
+                <div class='aqi-hero-label' style='color:{color};'>{cat}</div>
+                <div class='aqi-hero-desc'>{desc}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
     with col_weather:
         with st.container(border=True):
-            st.markdown("#### Current Weather")
+            st.markdown("#### Weather Now")
             temp = conditions.get('temperature')
             hum  = conditions.get('humidity')
             wind = conditions.get('wind_speed')
             st.markdown(f"""
-            <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; text-align:center; padding:8px 0 10px 0;'>
-                <div>
-                    <div style='font-size:26px;'>🌡️</div>
-                    <div style='font-size:17px; font-weight:700; color:#1a1d23; font-family:"JetBrains Mono",monospace;'>{f"{temp:.0f}°C" if temp is not None else "—"}</div>
-                    <div style='font-size:10px; color:#8a9099; text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-top:2px;'>Temperature</div>
+            <div style='display:grid; grid-template-columns:1fr; gap:10px; padding:4px 0;'>
+                <div class='metric-mini'>
+                    <div style='font-size:18px; margin-bottom:4px;'>🌡️</div>
+                    <div class='metric-mini-val'>{f"{temp:.0f}°C" if temp is not None else "—"}</div>
+                    <div class='metric-mini-label'>Temperature</div>
                 </div>
-                <div>
-                    <div style='font-size:26px;'>💧</div>
-                    <div style='font-size:17px; font-weight:700; color:#1a1d23; font-family:"JetBrains Mono",monospace;'>{f"{hum:.0f}%" if hum is not None else "—"}</div>
-                    <div style='font-size:10px; color:#8a9099; text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-top:2px;'>Humidity</div>
+                <div class='metric-mini'>
+                    <div style='font-size:18px; margin-bottom:4px;'>💧</div>
+                    <div class='metric-mini-val'>{f"{hum:.0f}%" if hum is not None else "—"}</div>
+                    <div class='metric-mini-label'>Humidity</div>
                 </div>
-                <div>
-                    <div style='font-size:26px;'>💨</div>
-                    <div style='font-size:17px; font-weight:700; color:#1a1d23; font-family:"JetBrains Mono",monospace;'>{f"{wind:.1f}" if wind is not None else "—"}</div>
-                    <div style='font-size:10px; color:#8a9099; text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-top:2px;'>Wind km/h</div>
+                <div class='metric-mini'>
+                    <div style='font-size:18px; margin-bottom:4px;'>💨</div>
+                    <div class='metric-mini-val'>{f"{wind:.1f}" if wind is not None else "—"}</div>
+                    <div class='metric-mini-label'>Wind km/h</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-    with col_forecast:
+    with col_fc:
         with st.container(border=True):
-            st.markdown("#### 3-Day Forecast")
-            forecast_data = []
-            for label in ["current", "24h", "48h", "72h"]:
-                p = predictions[label]
-                forecast_data.append({
-                    "label":    label.upper(),
-                    "aqi":      p["aqi"],
-                    "ci_lower": p.get("ci_lower", p["aqi"] * 0.95),
-                    "ci_upper": p.get("ci_upper", p["aqi"] * 1.05),
-                })
-            fdf = pd.DataFrame(forecast_data)
+            st.markdown("#### 3-Day AQI Forecast")
 
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=fdf["label"], y=fdf["ci_upper"], mode="lines",
-                line=dict(dash="dot", width=1, color="rgba(100,100,100,0.2)"),
-                showlegend=False,
-            ))
-            fig.add_trace(go.Scatter(
-                x=fdf["label"], y=fdf["ci_lower"], mode="lines",
-                line=dict(dash="dot", width=1, color="rgba(100,100,100,0.2)"),
-                fill="tonexty", fillcolor="rgba(234,179,8,0.1)",
-                showlegend=False,
-            ))
-            colors_fc = ["#22c55e", "#f97316", "#a855f7"]
-            for i in range(1, len(fdf)):
-                fig.add_trace(go.Scatter(
-                    x=fdf["label"].iloc[i-1:i+1], y=fdf["aqi"].iloc[i-1:i+1],
-                    mode="lines", line=dict(color=colors_fc[i-1], width=2.5),
-                    showlegend=True, name=f"{fdf['label'].iloc[i]}",
-                ))
-            fig.add_trace(go.Scatter(
-                x=fdf["label"], y=fdf["aqi"], mode="markers",
-                marker=dict(size=9, color=fdf["aqi"].apply(aqi_color),
-                            line=dict(width=2, color="white")),
-                showlegend=False,
-            ))
-            apply_chart_theme(fig, height=148)
-            fig.update_layout(legend=dict(orientation="h", y=-0.25, x=0))
-            st.plotly_chart(fig, use_container_width=True)
+            # Build forecast rows — explicit separate cards like the sample UI
+            forecast_labels = {
+                "current": ("TODAY'S AQI", ""),
+                "24h":     ("TOMORROW",    "+1"),
+                "48h":     ("DAY +2",      "+2"),
+                "72h":     ("DAY +3",      "+3"),
+            }
+            fc_cols = st.columns(4)
+            for col_widget, (key, (label, _)) in zip(fc_cols, forecast_labels.items()):
+                p = predictions[key]
+                fc_aqi = p["aqi"]
+                fc_cat, fc_color, _ = aqi_category(fc_aqi)
+                with col_widget:
+                    st.markdown(f"""
+                    <div class='forecast-card' style='border-color:{fc_color}22;'>
+                        <div class='fc-glow' style='background:{fc_color};'></div>
+                        <div class='fc-label'>{label}</div>
+                        <div class='fc-aqi' style='color:{fc_color};'>{fc_aqi:.0f}</div>
+                        <div class='fc-badge' style='background:{fc_color}18; color:{fc_color};'>↑ {fc_cat}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
-    # ── SHAP Quick Preview on Dashboard ──────────────────────────
+    # ── SECOND ROW: SHAP + Historical ────────────────────────────
     col_shap, col_hist = st.columns([1, 1.3])
 
     with col_shap:
@@ -656,7 +850,7 @@ def render_dashboard():
                     marker=dict(color=bar_colors[::-1], line=dict(width=0)),
                     text=[f"{v:.4f}" for v in top[imp_c][::-1]],
                     textposition="outside",
-                    textfont=dict(size=9, family="JetBrains Mono"),
+                    textfont=dict(size=9, family="JetBrains Mono", color="#8b91a8"),
                     hovertemplate="<b>%{y}</b><br>%{x:.5f}<extra></extra>",
                 ))
                 apply_chart_theme(fig_s, height=260)
@@ -665,13 +859,13 @@ def render_dashboard():
                     margin=dict(l=8, r=60, t=12, b=8),
                 )
                 st.plotly_chart(fig_s, use_container_width=True)
-                st.caption("→ See **Feature Importance** page for full analysis")
+                st.caption("→ See Feature Importance page for full analysis")
             else:
                 st.info("SHAP data not yet available from GitHub Releases.")
 
     with col_hist:
         with st.container(border=True):
-            st.markdown("#### Historical AQI Trends (7 days)")
+            st.markdown("#### Historical AQI (7 days)")
             df_hist = get_history_data(7)
             if not df_hist.empty and "aqi" in df_hist.columns:
                 fig_h = go.Figure()
@@ -679,7 +873,7 @@ def render_dashboard():
                     x=df_hist["timestamp"], y=df_hist["aqi"],
                     mode="lines+markers", name="AQI",
                     line=dict(color="#3b82f6", width=2),
-                    marker=dict(size=4),
+                    marker=dict(size=4, color="#3b82f6"),
                 ))
                 if "aqi_rolling_24h" in df_hist.columns:
                     fig_h.add_trace(go.Scatter(
@@ -696,8 +890,9 @@ def render_dashboard():
             else:
                 st.info("Historical data loading from Hopsworks...")
 
-    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
+    # ── THIRD ROW: Weather + Pollutants ─────────────────────────
     col_wc, col_pl = st.columns(2)
 
     with col_wc:
@@ -748,8 +943,9 @@ def render_dashboard():
             )
             st.plotly_chart(fig_p, use_container_width=True)
 
-    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
+    # ── Model metrics row ────────────────────────────────────────
     metrics = model_info.get("metrics", {})
     r2   = metrics.get('test_r2',   0.85)
     rmse = metrics.get('test_rmse', 12.3)
@@ -759,17 +955,17 @@ def render_dashboard():
     with st.container(border=True):
         mc1, mc2, mc3, mc4 = st.columns(4)
         for col_m, label, val, sub in [
-            (mc1, f"Test R²: {r2:.2f}",    r2,   "Explained variance — higher is better"),
-            (mc2, f"Test RMSE: {rmse:.1f}", rmse, "Root mean squared error"),
-            (mc3, f"Test MAE: {mae:.1f}",   mae,  "Mean absolute error"),
-            (mc4, f"MAPE: {mape:.1f}%",     mape, "Mean absolute percentage error"),
+            (mc1, f"Test R²",   f"{r2:.2f}",   "Explained variance"),
+            (mc2, f"Test RMSE", f"{rmse:.1f}",  "Root mean squared error"),
+            (mc3, f"Test MAE",  f"{mae:.1f}",   "Mean absolute error"),
+            (mc4, f"MAPE",      f"{mape:.1f}%", "Mean absolute % error"),
         ]:
             col_m.markdown(
-                f"""<div style='background:#f8f9fb; border:1px solid #e4e7ed; border-radius:12px;
-                               padding:14px 16px; text-align:center;'>
-                    <div style='font-size:16px; font-weight:700; color:#1a1d23;
-                                font-family:"JetBrains Mono",monospace;'>{label}</div>
-                    <div style='font-size:10px; color:#8a9099; margin-top:4px; font-weight:500;'>{sub}</div>
+                f"""<div class='metric-mini' style='padding:18px 16px;'>
+                    <div class='metric-mini-label' style='margin-bottom:8px;'>{label}</div>
+                    <div style='font-family:"JetBrains Mono",monospace; font-size:22px; font-weight:700;
+                                color:#e8eaf0; margin-bottom:4px;'>{val}</div>
+                    <div class='metric-mini-label' style='font-size:10px;'>{sub}</div>
                 </div>""",
                 unsafe_allow_html=True,
             )
@@ -863,9 +1059,10 @@ def render_history():
         for lo, hi, label, color, _ in AQI_CATEGORIES:
             if hi <= df["aqi"].max() or lo <= df["aqi"].max():
                 fig.add_hline(
-                    y=hi, line_dash="dot", line_color=color, opacity=0.3,
+                    y=hi, line_dash="dot", line_color=color, opacity=0.2,
                     annotation_text=label if hi <= df["aqi"].max() else None,
                     annotation_font_size=9,
+                    annotation_font_color="#8b91a8",
                 )
         apply_chart_theme(fig, height=380)
         st.plotly_chart(fig, use_container_width=True)
@@ -915,11 +1112,11 @@ def render_history():
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Feature Importance Page — Full SHAP Analysis
+# Feature Importance Page
 # ─────────────────────────────────────────────────────────────────────
 def render_shap():
     st.markdown("## 🎯 Feature Importance — SHAP Analysis")
-    st.markdown("Global feature importance from the latest trained model · fetched live from GitHub Releases.")
+    st.markdown("<p style='color:#555c72; font-size:12px; margin-bottom:1.5rem;'>Global feature importance from the latest trained model · fetched live from GitHub Releases.</p>", unsafe_allow_html=True)
 
     col_refresh = st.columns([4, 1])
     with col_refresh[1]:
@@ -934,7 +1131,6 @@ def render_shap():
         st.code(SHAP_CSV_URL, language="text")
         return
 
-    # Show raw data
     with st.expander("📋 Raw SHAP Importance Data", expanded=False):
         st.dataframe(shap_df, use_container_width=True, hide_index=True)
 
@@ -945,7 +1141,6 @@ def render_shap():
 
     st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 
-    # ── Chart 1 — Hero Bar ───────────────────────────────────────
     with st.container(border=True):
         st.markdown("#### 📊 Top Feature Importances — Mean |SHAP|")
         st.caption("Longer bar = stronger influence on AQI prediction. Color: green (lower) → red (higher importance).")
@@ -953,24 +1148,21 @@ def render_shap():
 
     st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 
-    # ── Charts 2 & 3 side by side ────────────────────────────────
     col_radar, col_waterfall = st.columns(2)
-
     with col_radar:
         with st.container(border=True):
             st.markdown("#### 🕸️ Radar — Top 8 Features")
-            st.caption("Radial spread shows relative importance of top features across all dimensions.")
+            st.caption("Radial spread shows relative importance of top features.")
             st.plotly_chart(fig2, use_container_width=True)
 
     with col_waterfall:
         with st.container(border=True):
             st.markdown("#### 📉 Cumulative Contribution")
-            st.caption("Bars = individual share. Dotted line = cumulative importance build-up across features.")
+            st.caption("Bars = individual share. Dotted line = cumulative build-up.")
             st.plotly_chart(fig3, use_container_width=True)
 
     st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 
-    # ── Top 5 insight cards ──────────────────────────────────────
     with st.container(border=True):
         st.markdown("#### 🔬 Top Feature Insights")
         cols_l = [c.lower() for c in shap_df.columns]
@@ -978,7 +1170,6 @@ def render_shap():
         imp_c  = shap_df.columns[cols_l.index("importance")] if "importance" in cols_l else shap_df.columns[1]
         shap_df[imp_c] = pd.to_numeric(shap_df[imp_c], errors="coerce").abs()
         top5 = shap_df.dropna(subset=[imp_c]).sort_values(imp_c, ascending=False).head(5).reset_index(drop=True)
-        total = top5[imp_c].sum()
 
         insight_cols = st.columns(5)
         rank_colors  = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6"]
@@ -987,15 +1178,15 @@ def render_shap():
         for i, (_, row) in enumerate(top5.iterrows()):
             pct = row[imp_c] / shap_df[imp_c].sum() * 100
             insight_cols[i].markdown(
-                f"""<div style='background:linear-gradient(135deg,{rank_colors[i]}11,{rank_colors[i]}08);
-                               border:1.5px solid {rank_colors[i]}33; border-radius:14px;
-                               padding:14px 10px; text-align:center;'>
-                    <div style='font-size:20px; margin-bottom:6px;'>{rank_labels[i]}</div>
-                    <div style='font-size:11px; font-weight:700; color:#1a1d23;
-                                word-break:break-word; line-height:1.3; margin-bottom:8px;'>{row[feat_c]}</div>
-                    <div style='font-size:13px; font-weight:700; color:{rank_colors[i]};
+                f"""<div style='background:linear-gradient(135deg,{rank_colors[i]}0d,{rank_colors[i]}06);
+                               border:1.5px solid {rank_colors[i]}28; border-radius:14px;
+                               padding:16px 10px; text-align:center;'>
+                    <div style='font-size:20px; margin-bottom:8px;'>{rank_labels[i]}</div>
+                    <div style='font-size:11px; font-weight:700; color:#e8eaf0;
+                                word-break:break-word; line-height:1.3; margin-bottom:10px;'>{row[feat_c]}</div>
+                    <div style='font-size:14px; font-weight:700; color:{rank_colors[i]};
                                 font-family:"JetBrains Mono",monospace;'>{row[imp_c]:.4f}</div>
-                    <div style='font-size:10px; color:#8a9099; margin-top:4px;'>{pct:.1f}% of total</div>
+                    <div style='font-size:10px; color:#555c72; margin-top:4px; font-weight:600;'>{pct:.1f}% of total</div>
                 </div>""",
                 unsafe_allow_html=True,
             )
@@ -1073,7 +1264,7 @@ elif page == "Feature Importance":
 elif page == "Model Info":
     render_model_info()
 
-# ── Footer ─────────────────────────────────────────────────────────────
+# ── Footer ────────────────────────────────────────────────────────────
 st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
 st.markdown("---")
 st.caption("🌍 Hawa Alert AQI Engine · Data: AQICN + OpenMeteo · Model Registry: Hopsworks · SHAP: GitHub Releases")
