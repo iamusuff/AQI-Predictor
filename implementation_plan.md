@@ -81,8 +81,8 @@ AQI_Predictor/
 |-------|------|-----------|
 | **Data APIs** | AQICN + OpenMeteo | AQICN gives real-time AQI & pollutants; OpenMeteo provides weather context (temp, humidity, wind). Both are free (OpenMeteo requires no API key). |
 | **Feature Store** | Hopsworks (free tier) | Purpose-built ML feature store with versioning, time-travel, and a model registry — all free for serverless tier. |
-| **ML Models** | Scikit-learn + TensorFlow | Scikit-learn for baselines (Random Forest, Ridge); TensorFlow for LSTM/GRU deep learning models. |
-| **Explainability** | SHAP | Works with both sklearn and TF models; generates intuitive feature importance plots. |
+| **ML Models** | Scikit-learn + Gradient Boosting | Scikit-learn for Random Forest; LightGBM, CatBoost, XGBoost for gradient boosting models. |
+| **Explainability** | SHAP | Works with tree-based and sklearn models; generates intuitive feature importance plots. |
 | **CI/CD** | GitHub Actions | Free, zero-infrastructure, cron-capable workflows. |
 | **Dashboard** | Streamlit | Fast prototyping of interactive ML dashboards with charts and maps. |
 | **API** | Flask | Lightweight REST API to serve predictions programmatically. |
@@ -95,7 +95,8 @@ AQI_Predictor/
 > **Goal**: Set up the repository, install dependencies, and configure API access.
 
 #### [NEW] [requirements.txt](file:///c:/Users/user/Desktop/AQI_Predictor/requirements.txt)
-- Core: `pandas`, `numpy`, `scikit-learn`, `tensorflow`, `hopsworks`
+- Core: `pandas`, `numpy`, `scikit-learn`, `hopsworks`
+- Gradient Boosting: `lightgbm`, `catboost`, `xgboost`
 - Data: `requests`, `python-dotenv`
 - Explainability: `shap`
 - Viz: `matplotlib`, `seaborn`, `plotly`
@@ -195,9 +196,9 @@ AQI_Predictor/
 |-------|------|-------|
 | Ridge Regression | Baseline | Simple linear baseline |
 | Random Forest | Ensemble | Good for tabular data, handles non-linearity |
-| XGBoost / Gradient Boosting | Ensemble | Often top performer for tabular data |
-| LSTM (TensorFlow) | Deep Learning | Captures temporal dependencies in time-series |
-| GRU (TensorFlow) | Deep Learning | Lighter alternative to LSTM |
+| XGBoost | Gradient Boosting | Top performer for tabular data |
+| LightGBM | Gradient Boosting | Fast training, memory efficient |
+| CatBoost | Gradient Boosting | Handles categorical features well, robust to overfitting |
 
 **Step 3 — Evaluation**:
 - Metrics: **RMSE**, **MAE**, **R²** for each model
@@ -298,7 +299,7 @@ schedule:
 
 1. **Target city**: Which city should we start with? (I'll set up the config to support multiple cities later)
 2. **Historical data depth**: How far back should we backfill? I suggest 90–180 days for a good training set.
-3. **Deep learning priority**: Should we prioritize getting sklearn models working first and add TensorFlow/LSTM later, or tackle both simultaneously?
+3. **Model selection**: The current implementation includes LightGBM, CatBoost, XGBoost, and Random Forest — all proven performers for tabular data.
 4. **Report format**: The project mentions a "detailed report" — should this be a PDF, a Jupyter notebook, or a markdown document?
 
 ---

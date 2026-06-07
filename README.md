@@ -124,7 +124,7 @@ streamlit run app/streamlit_app.py
 |-------|------|
 | Data APIs | AQICN (pollutants), OpenMeteo (weather + forecasts) |
 | Feature Store | Hopsworks |
-| ML Models | LightGBM, CatBoost, XGBoost, Random Forest, (LSTM, GRU) |
+| ML Models | LightGBM, CatBoost, XGBoost, Random Forest |
 | Explainability | SHAP |
 | CI/CD | GitHub Actions |
 | Dashboard | Streamlit |

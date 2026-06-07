@@ -26,24 +26,11 @@ import xgboost as xgb
 import lightgbm as lgb
 from catboost import CatBoostRegressor
 
-# Deep learning (optional)
-try:
-    import tensorflow as tf
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import LSTM, GRU, Dense, Dropout
-    from tensorflow.keras.callbacks import EarlyStopping
-    TF_AVAILABLE = True
-except ImportError:
-    TF_AVAILABLE = False
-
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-if not TF_AVAILABLE:
-    logger.warning("⚠️  TensorFlow not available — LSTM/GRU models will be skipped.")
 
 from config import (
     FEATURE_GROUP_NAME,
@@ -361,61 +348,6 @@ def train_xgboost(X_train, y_train, X_val, y_val,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Deep Learning (optional)
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _prepare_sequences(X, y, time_steps=24):
-    n = len(X)
-    if n < time_steps:
-        return None, None
-    X_out = np.array([X[i - time_steps:i] for i in range(time_steps, n)])
-    y_out = y[time_steps:]
-    return X_out, y_out
-
-
-def _train_rnn(layer_class, X_train_seq, y_train_seq, X_val_seq, y_val_seq,
-               epochs=50, units=64, name="RNN"):
-    if not TF_AVAILABLE:
-        logger.warning(f"⚠️  Skipping {name} — TensorFlow not available")
-        return None, None
-
-    logger.info(f"Training {name}...")
-    time_steps = X_train_seq.shape[1]
-    n_features = X_train_seq.shape[2]
-
-    model = Sequential([
-        layer_class(units, activation='tanh', return_sequences=True, input_shape=(time_steps, n_features)),
-        Dropout(0.2),
-        layer_class(units // 2, activation='tanh'),
-        Dropout(0.2),
-        Dense(1),
-    ])
-    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
-    model.fit(
-        X_train_seq, y_train_seq,
-        validation_data=(X_val_seq, y_val_seq),
-        epochs=epochs, batch_size=32,
-        callbacks=[EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)],
-        verbose=0,
-    )
-
-    metrics = _compute_metrics(
-        y_train_seq, model.predict(X_train_seq, verbose=0).flatten(),
-        y_val_seq,   model.predict(X_val_seq, verbose=0).flatten(),
-    )
-    logger.info(f"✅ {name} — Val RMSE: {metrics['val_rmse']:.2f}, Val R²: {metrics['val_r2']:.4f}")
-    return model, metrics
-
-
-def train_lstm(X_train_seq, y_train_seq, X_val_seq, y_val_seq, epochs=50, units=64):
-    return _train_rnn(LSTM, X_train_seq, y_train_seq, X_val_seq, y_val_seq, epochs, units, "LSTM")
-
-
-def train_gru(X_train_seq, y_train_seq, X_val_seq, y_val_seq, epochs=50, units=64):
-    return _train_rnn(GRU, X_train_seq, y_train_seq, X_val_seq, y_val_seq, epochs, units, "GRU")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Evaluation
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -715,48 +647,6 @@ def run(data_path: str = "data/features.csv", save_models: bool = True,
         'metrics':      xgb_metrics,
         'test_metrics': evaluate_model(xgb_model, X_test_scaled, y_test, "XGBoost"),
     }
-
-    # ── LSTM / GRU (optional) ─────────────────────────────────────────────────
-    X_train_seq = X_val_seq = X_test_seq = None
-    y_train_seq = y_val_seq = y_test_seq = None
-
-    if TF_AVAILABLE:
-        X_train_seq, y_train_seq = _prepare_sequences(X_train_scaled, y_train)
-        X_val_seq,   y_val_seq   = _prepare_sequences(X_val_scaled,   y_val)
-        X_test_seq,  y_test_seq  = _prepare_sequences(X_test_scaled,  y_test)
-
-        if X_train_seq is not None:
-            logger.info("\n  [5/4] LSTM")
-            lstm_model, lstm_metrics = train_lstm(X_train_seq, y_train_seq, X_val_seq, y_val_seq)
-            if lstm_model is not None:
-                lstm_pred = lstm_model.predict(X_test_seq, verbose=0).flatten()
-                results['LSTM'] = {
-                    'model':   lstm_model,
-                    'metrics': lstm_metrics,
-                    'test_metrics': {
-                        'test_rmse': float(np.sqrt(mean_squared_error(y_test_seq, lstm_pred))),
-                        'test_mae':  float(mean_absolute_error(y_test_seq, lstm_pred)),
-                        'test_r2':   float(r2_score(y_test_seq, lstm_pred)),
-                    },
-                }
-
-            logger.info("\n  [6/4] GRU")
-            gru_model, gru_metrics = train_gru(X_train_seq, y_train_seq, X_val_seq, y_val_seq)
-            if gru_model is not None:
-                gru_pred = gru_model.predict(X_test_seq, verbose=0).flatten()
-                results['GRU'] = {
-                    'model':   gru_model,
-                    'metrics': gru_metrics,
-                    'test_metrics': {
-                        'test_rmse': float(np.sqrt(mean_squared_error(y_test_seq, gru_pred))),
-                        'test_mae':  float(mean_absolute_error(y_test_seq, gru_pred)),
-                        'test_r2':   float(r2_score(y_test_seq, gru_pred)),
-                    },
-                }
-        else:
-            logger.warning("⚠️  Not enough data for LSTM/GRU sequences (need ≥ 24 samples)")
-    else:
-        logger.warning("⚠️  TensorFlow not available — skipping LSTM and GRU")
 
     # ── Step 7: Compare and select best model ─────────────────────────────────
     logger.info("\n[7/8] Comparing models...")
