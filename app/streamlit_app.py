@@ -16,13 +16,15 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 
+
 import hopsworks
-from config import (
+from src.config import (
     HOPSWORKS_API_KEY,
     HOPSWORKS_PROJECT_NAME,
     FEATURE_GROUP_NAME,
     FEATURE_GROUP_VERSION,
 )
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
