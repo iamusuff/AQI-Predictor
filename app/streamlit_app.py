@@ -18,7 +18,11 @@ from plotly.subplots import make_subplots
 
 
 import hopsworks
-from src.config import (
+src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+
+if src_path not in sys.path:
+    sys.path.append(src_path)
+from config import (
     HOPSWORKS_API_KEY,
     HOPSWORKS_PROJECT_NAME,
     FEATURE_GROUP_NAME,
