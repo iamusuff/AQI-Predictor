@@ -1,9 +1,12 @@
-# 🌍 Pearls AQI Predictor
+# 🌍 Hawa Alert: AQI Predictor
 
 > Predict the Air Quality Index (AQI) for **Karachi** (and other cities) for the next 3 days using a fully serverless ML pipeline.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+**Live App:** [https://hawa-alert-aqi-predictor.streamlit.app/](https://hawa-alert-aqi-predictor.streamlit.app/)  
+**Source Code:** [https://github.com/iamusuff/AQI-Predictor](https://github.com/iamusuff/AQI-Predictor)
 
 **Features:**
 - ⏰ Automated hourly data collection from AQICN & OpenMeteo APIs (free!)
@@ -44,14 +47,13 @@
                          ┌──────────────────┐
                          │   Streamlit      │
                          │   Dashboard      │
-                         │   + Flask API    │
                          └──────────────────┘
 ```
 
 ## Project Structure
 
 ```
-AQI_Predictor/
+AQI-Predictor/
 ├── src/
 │   ├── config.py              # Configuration & constants
 │   ├── utils.py               # API helpers & feature engineering
@@ -60,16 +62,13 @@ AQI_Predictor/
 │   ├── training_pipeline.py   # Train → evaluate → register model
 │   └── inference.py           # Load model → predict next 3 days
 ├── app/
-│   ├── streamlit_app.py       # Interactive dashboard
-│   └── flask_api.py           # REST API
+│   └── streamlit_app.py       # Interactive dashboard
 ├── notebooks/
-│   ├── 01_eda.ipynb
-│   ├── 02_model_experiments.ipynb
-│   └── 03_shap_analysis.ipynb
+│   ├── 01_eda.py
+│   └── 02_model_experiments.ipynb
 ├── .github/workflows/
 │   ├── feature_pipeline.yml   # Runs every hour
 │   └── training_pipeline.yml  # Runs every day
-├── tests/
 ├── requirements.txt
 ├── .env.example
 └── main.py                    # CLI entry point
@@ -79,10 +78,11 @@ AQI_Predictor/
 
 ### 1. Clone & create virtual environment
 ```bash
-git clone <your-repo-url>
-cd AQI_Predictor
+git clone https://github.com/iamusuff/AQI-Predictor.git
+cd AQI-Predictor
 python -m venv venv
-venv\Scripts\activate      # Windows
+source venv/bin/activate       # macOS/Linux
+venv\Scripts\activate          # Windows
 ```
 
 ### 2. Install dependencies
@@ -128,7 +128,6 @@ streamlit run app/streamlit_app.py
 | Explainability | SHAP |
 | CI/CD | GitHub Actions |
 | Dashboard | Streamlit |
-| API | Flask (planned) |
 
 ## AQI Scale
 
@@ -156,21 +155,6 @@ streamlit run app/streamlit_app.py
 
 ---
 
-## 🧪 Testing
-
-```bash
-# Run all tests
-pytest tests/
-
-# Run with coverage
-pytest --cov=src tests/
-
-# Run specific test file
-pytest tests/test_feature_pipeline.py -v
-```
-
----
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please:
@@ -179,12 +163,6 @@ Contributions are welcome! Please:
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is part of the Pearls AQI Predictor initiative.
 
 ---
 
