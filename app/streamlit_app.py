@@ -47,17 +47,36 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────────────
-# CSS — Dark ML Dashboard Theme (matching sample UI)
+# CSS — Dark ML Dashboard Theme (Full Dark, High Contrast)
 # ─────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 
-/* ── ROOT & GLOBAL ── */
-html, body, [class*="css"], .stApp {
+/* ══════════════════════════════════════════════════════════
+   ROOT & GLOBAL — force dark everywhere
+   ══════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body,
+[class*="css"],
+.stApp,
+.stApp > header,
+[data-testid="stAppViewContainer"],
+[data-testid="stHeader"],
+[data-testid="stToolbar"] {
     font-family: 'IBM Plex Sans', sans-serif !important;
     background-color: #0d1117 !important;
     color: #c9d1d9 !important;
+}
+
+/* Kill any white backgrounds that leaked from light theme */
+[data-testid="stAppViewContainer"] > .main,
+.main,
+section.main,
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"] {
+    background-color: #0d1117 !important;
 }
 
 /* ── MAIN CONTAINER ── */
@@ -67,17 +86,55 @@ html, body, [class*="css"], .stApp {
     background-color: #0d1117 !important;
 }
 
-/* ── SIDEBAR ── */
-section[data-testid="stSidebar"] {
-    background: #161b22 !important;
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR — full dark, matching theme
+   ══════════════════════════════════════════════════════════ */
+section[data-testid="stSidebar"],
+section[data-testid="stSidebar"] > div,
+section[data-testid="stSidebar"] > div > div,
+section[data-testid="stSidebar"] .stSidebarContent {
+    background: #0d1117 !important;
     border-right: 1px solid #21262d !important;
     min-width: 220px !important;
     max-width: 220px !important;
 }
-section[data-testid="stSidebar"] * {
+
+/* All text inside sidebar */
+section[data-testid="stSidebar"] *,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] div {
     color: #8b949e !important;
     font-family: 'IBM Plex Sans', sans-serif !important;
+    background-color: transparent !important;
 }
+
+/* Sidebar collapse/expand button (keyboard_double_arrow icon) */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+button[kind="header"],
+[data-testid="stSidebar"] button[data-testid="baseButton-header"] {
+    background: #161b22 !important;
+    border: 1px solid #21262d !important;
+    color: #8b949e !important;
+    border-radius: 6px !important;
+}
+[data-testid="collapsedControl"] svg,
+[data-testid="stSidebarCollapsedControl"] svg,
+button[kind="header"] svg {
+    fill: #8b949e !important;
+    stroke: #8b949e !important;
+    color: #8b949e !important;
+}
+[data-testid="collapsedControl"]:hover,
+button[kind="header"]:hover {
+    background: #21262d !important;
+    border-color: #ff4444 !important;
+    color: #e6edf3 !important;
+}
+
+/* Sidebar nav radio */
 section[data-testid="stSidebar"] .stRadio > div {
     gap: 2px !important;
 }
@@ -87,26 +144,52 @@ section[data-testid="stSidebar"] .stRadio label {
     padding: 8px 12px !important;
     border-radius: 6px !important;
     cursor: pointer !important;
-    transition: all 0.15s !important;
+    transition: all 0.15s ease !important;
     border-left: 2px solid transparent !important;
     color: #8b949e !important;
     display: flex !important;
     align-items: center !important;
+    background: transparent !important;
 }
 section[data-testid="stSidebar"] .stRadio label:hover {
-    background: rgba(48, 54, 61, 0.6) !important;
+    background: rgba(48, 54, 61, 0.8) !important;
     color: #e6edf3 !important;
     border-left-color: #ff4444 !important;
 }
+/* Selected radio item */
+section[data-testid="stSidebar"] .stRadio label[data-baseweb="radio"]:has(input:checked),
+section[data-testid="stSidebar"] .stRadio [aria-checked="true"] ~ span,
+section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + span {
+    color: #e6edf3 !important;
+}
+/* Radio dot — hide default, use accent */
+section[data-testid="stSidebar"] .stRadio [data-testid="stWidgetLabel"] {
+    display: none !important;
+}
+section[data-testid="stSidebar"] .stRadio [role="radio"] {
+    background: #21262d !important;
+    border-color: #30363d !important;
+}
+section[data-testid="stSidebar"] .stRadio [role="radio"][aria-checked="true"] {
+    background: #ff4444 !important;
+    border-color: #ff4444 !important;
+    box-shadow: 0 0 8px rgba(255,68,68,0.4) !important;
+}
+
 section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-    color: #8b949e !important;
+    color: #6e7681 !important;
     font-size: 12px !important;
+    background: transparent !important;
 }
 section[data-testid="stSidebar"] hr {
     border-color: #21262d !important;
     margin: 0.8rem 0 !important;
 }
-section[data-testid="stSidebar"] .stButton button {
+
+/* Sidebar primary button */
+section[data-testid="stSidebar"] .stButton > button,
+section[data-testid="stSidebar"] button[kind="primary"],
+section[data-testid="stSidebar"] button[kind="secondary"] {
     background: #ff4444 !important;
     color: #ffffff !important;
     border: none !important;
@@ -114,22 +197,86 @@ section[data-testid="stSidebar"] .stButton button {
     font-size: 13px !important;
     font-weight: 600 !important;
     padding: 0.55rem 1rem !important;
-    transition: all 0.15s !important;
+    transition: all 0.15s ease !important;
     width: 100% !important;
     letter-spacing: 0.3px !important;
 }
-section[data-testid="stSidebar"] .stButton button:hover {
+section[data-testid="stSidebar"] .stButton > button:hover {
     background: #cc0000 !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 14px rgba(255, 68, 68, 0.35) !important;
 }
-section[data-testid="stSidebar"] .stSelectbox > div {
-    background: #21262d !important;
+
+/* Sidebar selectbox */
+section[data-testid="stSidebar"] .stSelectbox > div,
+section[data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background: #161b22 !important;
     border-color: #30363d !important;
     border-radius: 6px !important;
+    color: #c9d1d9 !important;
+}
+section[data-testid="stSidebar"] [data-baseweb="select"] span,
+section[data-testid="stSidebar"] [data-baseweb="select"] div {
+    color: #c9d1d9 !important;
+    background: transparent !important;
 }
 
-/* ── HEADINGS ── */
+/* ══════════════════════════════════════════════════════════
+   TOP NAVBAR / HEADER
+   ══════════════════════════════════════════════════════════ */
+[data-testid="stHeader"] {
+    background: #0d1117 !important;
+    border-bottom: 1px solid #21262d !important;
+}
+[data-testid="stToolbar"],
+[data-testid="stDecoration"] {
+    background: #0d1117 !important;
+}
+/* Toolbar icons */
+[data-testid="stToolbar"] button,
+[data-testid="stToolbar"] button svg {
+    color: #8b949e !important;
+    fill: #8b949e !important;
+}
+[data-testid="stToolbar"] button:hover,
+[data-testid="stToolbar"] button:hover svg {
+    color: #e6edf3 !important;
+    fill: #e6edf3 !important;
+    background: #21262d !important;
+}
+/* Running/stop button */
+header [data-testid="stToolbar"] [data-testid="baseButton-header"] {
+    background: transparent !important;
+    border: 1px solid #30363d !important;
+    border-radius: 6px !important;
+    color: #8b949e !important;
+}
+header [data-testid="stToolbar"] [data-testid="baseButton-header"]:hover {
+    background: #21262d !important;
+    border-color: #ff4444 !important;
+    color: #ff4444 !important;
+}
+/* App title in header */
+header .stApp h1,
+[data-testid="stHeader"] h1 {
+    color: #e6edf3 !important;
+}
+/* Hamburger / menu icon */
+[data-testid="stSidebarNavItems"],
+button[aria-label="open sidebar"],
+button[aria-label="close sidebar"],
+[data-testid="stSidebarNavSeparator"] {
+    background: transparent !important;
+    color: #8b949e !important;
+}
+[data-testid="stSidebarNavItems"] svg,
+button[aria-label="open sidebar"] svg {
+    fill: #8b949e !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   HEADINGS
+   ══════════════════════════════════════════════════════════ */
 h1 {
     font-size: 22px !important;
     font-weight: 700 !important;
@@ -155,8 +302,11 @@ h3, h4 {
     font-family: 'IBM Plex Sans', sans-serif !important;
 }
 
-/* ── CARDS (border containers) ── */
-div[data-testid="stVerticalBlockBorderWrapper"] {
+/* ══════════════════════════════════════════════════════════
+   CARDS (border containers)
+   ══════════════════════════════════════════════════════════ */
+div[data-testid="stVerticalBlockBorderWrapper"],
+div[data-testid="stVerticalBlock"][data-has-border="true"] {
     background: #161b22 !important;
     border: 1px solid #21262d !important;
     border-radius: 10px !important;
@@ -168,8 +318,12 @@ div[data-testid="stVerticalBlockBorderWrapper"]:hover {
     border-color: #30363d !important;
 }
 
-/* ── METRICS ── */
-div[data-testid="stMetricLabel"] p {
+/* ══════════════════════════════════════════════════════════
+   METRICS
+   ══════════════════════════════════════════════════════════ */
+div[data-testid="stMetricLabel"] p,
+div[data-testid="stMetricLabel"] label,
+[data-testid="stMetricLabel"] {
     font-size: 11px !important;
     text-transform: uppercase !important;
     letter-spacing: 0.8px !important;
@@ -177,47 +331,106 @@ div[data-testid="stMetricLabel"] p {
     font-weight: 600 !important;
     font-family: 'IBM Plex Sans', sans-serif !important;
 }
-div[data-testid="stMetricValue"] {
+div[data-testid="stMetricValue"],
+div[data-testid="stMetricValue"] * {
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 22px !important;
     font-weight: 600 !important;
     color: #e6edf3 !important;
+    background: transparent !important;
 }
-div[data-testid="stMetricDelta"] {
+div[data-testid="stMetricDelta"],
+div[data-testid="stMetricDelta"] * {
     font-size: 11px !important;
     font-family: 'IBM Plex Mono', monospace !important;
+    background: transparent !important;
+}
+/* delta up = green, down = red */
+div[data-testid="stMetricDelta"][data-direction="up"] {
+    color: #3fb950 !important;
+}
+div[data-testid="stMetricDelta"][data-direction="down"] {
+    color: #f85149 !important;
 }
 
-/* ── ALERTS ── */
-div[data-testid="stAlert"] {
+/* ══════════════════════════════════════════════════════════
+   ALERTS / BANNERS
+   ══════════════════════════════════════════════════════════ */
+div[data-testid="stAlert"],
+[data-testid="stAlertContainer"] {
     border-radius: 8px !important;
     font-size: 13px !important;
     font-weight: 500 !important;
     padding: 0.65rem 1rem !important;
     border-width: 1px !important;
     font-family: 'IBM Plex Sans', sans-serif !important;
+    background: transparent !important;
 }
-.stSuccess {
-    background-color: rgba(35, 134, 54, 0.15) !important;
+/* Success */
+[data-testid="stAlert"][kind="success"],
+.element-container:has([data-testid="stAlert"][kind="success"]) {
+    background-color: rgba(35, 134, 54, 0.12) !important;
     border-color: #238636 !important;
     color: #3fb950 !important;
 }
-.stWarning {
-    background-color: rgba(187, 128, 9, 0.15) !important;
+[data-testid="stAlert"][kind="success"] p,
+[data-testid="stAlert"][kind="success"] span {
+    color: #3fb950 !important;
+}
+/* Warning */
+[data-testid="stAlert"][kind="warning"] {
+    background-color: rgba(187, 128, 9, 0.12) !important;
     border-color: #bb8009 !important;
     color: #d29922 !important;
 }
-.stError {
-    background-color: rgba(248, 81, 73, 0.15) !important;
+[data-testid="stAlert"][kind="warning"] p,
+[data-testid="stAlert"][kind="warning"] span {
+    color: #d29922 !important;
+}
+/* Error */
+[data-testid="stAlert"][kind="error"] {
+    background-color: rgba(248, 81, 73, 0.12) !important;
     border-color: #f85149 !important;
     color: #ff7b72 !important;
 }
+[data-testid="stAlert"][kind="error"] p,
+[data-testid="stAlert"][kind="error"] span {
+    color: #ff7b72 !important;
+}
+/* Info */
+[data-testid="stAlert"][kind="info"] {
+    background-color: rgba(56, 139, 253, 0.1) !important;
+    border-color: #388bfd !important;
+    color: #79c0ff !important;
+}
+[data-testid="stAlert"][kind="info"] p,
+[data-testid="stAlert"][kind="info"] span {
+    color: #79c0ff !important;
+}
+/* Alert icons */
+[data-testid="stAlert"] svg {
+    fill: currentColor !important;
+}
 
-/* ── DATAFRAME ── */
-div[data-testid="stDataFrame"] {
+/* ══════════════════════════════════════════════════════════
+   DATAFRAME / TABLE
+   ══════════════════════════════════════════════════════════ */
+div[data-testid="stDataFrame"],
+div[data-testid="stDataFrame"] > div,
+.stDataFrame {
     border-radius: 8px !important;
     overflow: hidden !important;
     border: 1px solid #21262d !important;
+    background: #161b22 !important;
+}
+/* Streamlit uses an iframe for dataframes — style the inner element */
+div[data-testid="stDataFrame"] iframe {
+    background: #161b22 !important;
+    color: #c9d1d9 !important;
+}
+div[data-testid="stDataFrame"] table {
+    background: #161b22 !important;
+    color: #c9d1d9 !important;
 }
 div[data-testid="stDataFrame"] table thead tr th {
     background: #21262d !important;
@@ -229,40 +442,222 @@ div[data-testid="stDataFrame"] table thead tr th {
     border-bottom: 1px solid #30363d !important;
 }
 div[data-testid="stDataFrame"] table tbody tr {
+    background: #161b22 !important;
+    color: #c9d1d9 !important;
     border-bottom: 1px solid #21262d !important;
 }
 div[data-testid="stDataFrame"] table tbody tr:hover {
     background: rgba(56, 139, 253, 0.06) !important;
 }
+div[data-testid="stDataFrame"] table tbody tr td {
+    color: #c9d1d9 !important;
+}
+/* Glide-data-grid (newer Streamlit) */
+[data-testid="stDataFrame"] [role="grid"],
+[data-testid="stDataFrame"] [role="row"],
+[data-testid="stDataFrame"] [role="columnheader"],
+[data-testid="stDataFrame"] [role="gridcell"] {
+    background: #161b22 !important;
+    color: #c9d1d9 !important;
+    border-color: #21262d !important;
+}
+[data-testid="stDataFrame"] [role="columnheader"] {
+    background: #21262d !important;
+    color: #8b949e !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.6px !important;
+    font-weight: 600 !important;
+}
 
-/* ── EXPANDER ── */
-details {
+/* ══════════════════════════════════════════════════════════
+   EXPANDER
+   ══════════════════════════════════════════════════════════ */
+details,
+[data-testid="stExpander"] {
     border-radius: 8px !important;
     border: 1px solid #21262d !important;
     background: #161b22 !important;
 }
-details summary {
+details summary,
+[data-testid="stExpander"] summary {
     font-size: 13px !important;
     font-weight: 600 !important;
     color: #8b949e !important;
     padding: 0.6rem 0.8rem !important;
     font-family: 'IBM Plex Sans', sans-serif !important;
+    background: #161b22 !important;
 }
-details summary:hover {
+details summary:hover,
+[data-testid="stExpander"] summary:hover {
     color: #e6edf3 !important;
+    background: rgba(48,54,61,0.5) !important;
+}
+/* Expander chevron icon */
+details summary svg,
+[data-testid="stExpander"] summary svg {
+    fill: #8b949e !important;
+    color: #8b949e !important;
+}
+details[open] summary svg {
+    fill: #e6edf3 !important;
+}
+/* Expander content */
+details > div,
+[data-testid="stExpander"] > div > div {
+    background: #161b22 !important;
+    border-top: 1px solid #21262d !important;
+    padding: 0.8rem !important;
 }
 
-/* ── MISC ── */
-hr {
-    border-color: #21262d !important;
-    margin: 0.8rem 0 !important;
+/* ══════════════════════════════════════════════════════════
+   SELECT / INPUT / WIDGET CONTROLS
+   ══════════════════════════════════════════════════════════ */
+/* Selectbox trigger */
+div[data-testid="stSelectbox"] > div,
+[data-baseweb="select"] > div,
+[data-baseweb="select"] [data-baseweb="base-input"] {
+    border-radius: 6px !important;
+    border-color: #30363d !important;
+    font-size: 13px !important;
+    background: #21262d !important;
+    color: #c9d1d9 !important;
 }
-small, .stCaption, [data-testid="stCaptionContainer"] p {
-    color: #6e7681 !important;
-    font-size: 11px !important;
+[data-baseweb="select"] * {
+    color: #c9d1d9 !important;
+    background: transparent !important;
+}
+/* Selectbox dropdown popup */
+[data-baseweb="popover"],
+[data-baseweb="menu"],
+ul[data-baseweb="menu"],
+[role="listbox"],
+[data-baseweb="popover"] > div {
+    background: #21262d !important;
+    border: 1px solid #30363d !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
+}
+[data-baseweb="menu"] li,
+[data-baseweb="menu"] [role="option"],
+[role="listbox"] li,
+[role="option"] {
+    background: #21262d !important;
+    color: #c9d1d9 !important;
+    font-size: 13px !important;
     font-family: 'IBM Plex Sans', sans-serif !important;
 }
-div[data-testid="stJson"] {
+[data-baseweb="menu"] li:hover,
+[role="option"]:hover,
+[role="option"][aria-selected="true"] {
+    background: #30363d !important;
+    color: #e6edf3 !important;
+}
+/* Dropdown arrow */
+[data-baseweb="select"] svg {
+    fill: #8b949e !important;
+}
+
+/* Text input */
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-baseweb="input"] input,
+[data-baseweb="textarea"] textarea {
+    background: #21262d !important;
+    color: #c9d1d9 !important;
+    border-color: #30363d !important;
+    border-radius: 6px !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
+    font-size: 13px !important;
+}
+[data-testid="stTextInput"] input:focus,
+[data-testid="stTextArea"] textarea:focus {
+    border-color: #ff4444 !important;
+    box-shadow: 0 0 0 2px rgba(255,68,68,0.2) !important;
+    background: #21262d !important;
+    color: #e6edf3 !important;
+}
+[data-testid="stTextInput"] input::placeholder,
+[data-testid="stTextArea"] textarea::placeholder {
+    color: #6e7681 !important;
+}
+/* Input wrapper */
+[data-baseweb="base-input"] {
+    background: #21262d !important;
+    border-color: #30363d !important;
+}
+
+/* Number input */
+[data-testid="stNumberInput"] input {
+    background: #21262d !important;
+    color: #c9d1d9 !important;
+    border-color: #30363d !important;
+}
+[data-testid="stNumberInput"] button {
+    background: #30363d !important;
+    color: #c9d1d9 !important;
+    border-color: #30363d !important;
+}
+
+/* Slider */
+[data-testid="stSlider"] [role="slider"] {
+    background: #ff4444 !important;
+    border-color: #ff4444 !important;
+}
+[data-testid="stSlider"] [data-baseweb="slider"] div[role="progressbar"] {
+    background: #ff4444 !important;
+}
+[data-testid="stSlider"] [data-testid="stTickBar"] {
+    color: #6e7681 !important;
+}
+
+/* Checkbox */
+[data-testid="stCheckbox"] input[type="checkbox"] + span {
+    background: #21262d !important;
+    border-color: #30363d !important;
+    border-radius: 4px !important;
+}
+[data-testid="stCheckbox"] input[type="checkbox"]:checked + span {
+    background: #ff4444 !important;
+    border-color: #ff4444 !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   BUTTONS (main area)
+   ══════════════════════════════════════════════════════════ */
+.stButton > button,
+button[kind="secondary"] {
+    background: #21262d !important;
+    color: #c9d1d9 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 6px !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    transition: all 0.15s ease !important;
+}
+.stButton > button:hover {
+    background: #30363d !important;
+    border-color: #ff4444 !important;
+    color: #e6edf3 !important;
+    box-shadow: 0 2px 8px rgba(255,68,68,0.15) !important;
+}
+button[kind="primary"] {
+    background: #ff4444 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 6px !important;
+}
+button[kind="primary"]:hover {
+    background: #cc0000 !important;
+    box-shadow: 0 4px 14px rgba(255,68,68,0.35) !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   JSON DISPLAY
+   ══════════════════════════════════════════════════════════ */
+div[data-testid="stJson"],
+div[data-testid="stJson"] > div {
     background: #161b22 !important;
     border-radius: 8px !important;
     border: 1px solid #21262d !important;
@@ -270,26 +665,118 @@ div[data-testid="stJson"] {
     font-family: 'IBM Plex Mono', monospace !important;
     color: #c9d1d9 !important;
 }
-div[data-testid="stSelectbox"] > div, div[data-baseweb="select"] {
-    border-radius: 6px !important;
-    border-color: #30363d !important;
-    font-size: 13px !important;
-    background: #21262d !important;
-    color: #c9d1d9 !important;
+/* JSON token colors */
+div[data-testid="stJson"] .string { color: #79c0ff !important; }
+div[data-testid="stJson"] .number { color: #f0883e !important; }
+div[data-testid="stJson"] .boolean { color: #ff7b72 !important; }
+div[data-testid="stJson"] .null { color: #8b949e !important; }
+div[data-testid="stJson"] .key { color: #d2a8ff !important; }
+
+/* ══════════════════════════════════════════════════════════
+   PLOTLY CHARTS — force dark bg
+   ══════════════════════════════════════════════════════════ */
+.js-plotly-plot .plotly,
+.js-plotly-plot .plotly .main-svg,
+.js-plotly-plot,
+.plot-container,
+.svg-container {
+    background: transparent !important;
+}
+.js-plotly-plot .plotly .bg {
+    fill: transparent !important;
 }
 
-/* ── PLOTLY CHARTS — force dark bg ── */
-.js-plotly-plot .plotly {
+/* ══════════════════════════════════════════════════════════
+   CAPTION / SMALL TEXT
+   ══════════════════════════════════════════════════════════ */
+small,
+.stCaption,
+[data-testid="stCaptionContainer"] p,
+[data-testid="stCaptionContainer"] span {
+    color: #6e7681 !important;
+    font-size: 11px !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
     background: transparent !important;
 }
 
-/* ── SCROLLBAR ── */
+/* ══════════════════════════════════════════════════════════
+   MARKDOWN TEXT
+   ══════════════════════════════════════════════════════════ */
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stMarkdownContainer"] a {
+    color: #c9d1d9 !important;
+    background: transparent !important;
+}
+[data-testid="stMarkdownContainer"] strong,
+[data-testid="stMarkdownContainer"] b {
+    color: #e6edf3 !important;
+}
+[data-testid="stMarkdownContainer"] a {
+    color: #58a6ff !important;
+}
+[data-testid="stMarkdownContainer"] code {
+    background: #21262d !important;
+    color: #e6edf3 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CODE BLOCK
+   ══════════════════════════════════════════════════════════ */
+[data-testid="stCode"],
+.stCode,
+pre {
+    background: #161b22 !important;
+    border: 1px solid #21262d !important;
+    border-radius: 8px !important;
+    color: #c9d1d9 !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   HR / DIVIDER
+   ══════════════════════════════════════════════════════════ */
+hr {
+    border: none !important;
+    border-top: 1px solid #21262d !important;
+    margin: 0.8rem 0 !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SCROLLBAR
+   ══════════════════════════════════════════════════════════ */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #0d1117; }
 ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #6e7681; }
 
-/* ── VERSION BADGE ── */
+/* ══════════════════════════════════════════════════════════
+   SPINNER / LOADING
+   ══════════════════════════════════════════════════════════ */
+[data-testid="stSpinner"] > div {
+    border-color: #30363d transparent #30363d #30363d !important;
+}
+[data-testid="stSpinner"] p {
+    color: #8b949e !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TOAST NOTIFICATIONS
+   ══════════════════════════════════════════════════════════ */
+[data-testid="stToast"] {
+    background: #21262d !important;
+    border: 1px solid #30363d !important;
+    border-radius: 8px !important;
+    color: #c9d1d9 !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CUSTOM COMPONENT CLASSES
+   ══════════════════════════════════════════════════════════ */
 .version-badge {
     font-size: 10px;
     font-family: 'IBM Plex Mono', monospace;
@@ -302,7 +789,6 @@ div[data-testid="stSelectbox"] > div, div[data-baseweb="select"] {
     margin-bottom: 12px;
 }
 
-/* ── NAV SECTION LABEL ── */
 .nav-label {
     font-size: 10px !important;
     font-weight: 700 !important;
@@ -311,9 +797,9 @@ div[data-testid="stSelectbox"] > div, div[data-baseweb="select"] {
     color: #6e7681 !important;
     margin: 12px 0 6px 0 !important;
     padding: 0 4px !important;
+    background: transparent !important;
 }
 
-/* ── PARAMS SECTION LABEL ── */
 .params-label {
     font-size: 10px !important;
     font-weight: 700 !important;
@@ -321,7 +807,78 @@ div[data-testid="stSelectbox"] > div, div[data-baseweb="select"] {
     letter-spacing: 1px !important;
     color: #6e7681 !important;
     margin: 8px 0 4px 0 !important;
+    background: transparent !important;
 }
+
+/* ══════════════════════════════════════════════════════════
+   FORECAST KEY METRIC CARDS (sample UI style)
+   ══════════════════════════════════════════════════════════ */
+.forecast-card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 10px;
+    padding: 16px 14px;
+    text-align: left;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+.forecast-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--card-accent, #388bfd);
+    border-radius: 10px 10px 0 0;
+}
+.forecast-card:hover {
+    border-color: #30363d;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.forecast-card .fc-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6e7681;
+    margin-bottom: 10px;
+    font-family: 'IBM Plex Sans', sans-serif;
+}
+.forecast-card .fc-value {
+    font-size: 42px;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+.forecast-card .fc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    margin-bottom: 6px;
+}
+.forecast-card .fc-arrow {
+    font-size: 10px;
+}
+.forecast-card .fc-desc {
+    font-size: 10px;
+    color: #6e7681;
+    font-family: 'IBM Plex Sans', sans-serif;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* ══════════════════════════════════════════════════════════
+   HIDE STREAMLIT BRANDING
+   ══════════════════════════════════════════════════════════ */
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+[data-testid="stDecoration"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -429,18 +986,7 @@ def render_shap_charts(df: pd.DataFrame):
     top_n  = min(15, len(df))
     df_top = df.head(top_n)
 
-    # Color scale: red accent → orange → yellow
     norm   = df_top[imp_col] / df_top[imp_col].max()
-    colors = [
-        f"rgba({int(255*v + 56*(1-v))}, {int(68*v + 139*(1-v))}, {int(68*v + 253*(1-v))}, 0.85)"
-        for v in norm
-    ]
-    # Actually use the ML dashboard palette: red for high, blue for low
-    colors = [
-        f"rgba({int(248*v + 56*(1-v))}, {int(81*(1-v) + 139*v*0)}, {int(73*(1-v) + 253*v)}, 0.85)"
-        for v in norm
-    ]
-    # Simpler: gradient from #388bfd (blue) to #f85149 (red) based on importance
     colors = []
     for v in norm:
         r = int(248 * v + 56 * (1 - v))
@@ -655,7 +1201,7 @@ st.sidebar.markdown("""
     <div style='display:flex; align-items:center; gap:10px; margin-bottom:8px;'>
         <div style='width:32px; height:32px; background:linear-gradient(135deg,#ff4444,#cc0000);
                     border-radius:8px; display:flex; align-items:center; justify-content:center;
-                    font-size:16px; flex-shrink:0;'>⚡</div>
+                    font-size:16px; flex-shrink:0; box-shadow:0 2px 8px rgba(255,68,68,0.3);'>⚡</div>
         <div>
             <div style='font-size:14px; font-weight:700; color:#e6edf3; letter-spacing:-0.2px; font-family:"IBM Plex Sans",sans-serif;'>Hawa Alert</div>
             <div style='font-size:10px; color:#6e7681; font-family:"IBM Plex Mono",monospace;'>v1.0.0</div>
@@ -786,7 +1332,7 @@ def render_dashboard():
     st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 
     # ── Top Metric Cards ─────────────────────────────────────────
-    col_aqi, col_weather, col_forecast = st.columns([1, 1.1, 1.6])
+    col_aqi, col_weather = st.columns([1, 1.1])
 
     with col_aqi:
         with st.container(border=True):
@@ -835,51 +1381,36 @@ def render_dashboard():
             </div>
             """, unsafe_allow_html=True)
 
-    with col_forecast:
-        with st.container(border=True):
-            st.markdown("<div style='font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#6e7681; margin-bottom:12px; font-family:\"IBM Plex Sans\",sans-serif;'>3-Day Forecast</div>", unsafe_allow_html=True)
-            forecast_data = []
-            for label in ["current", "24h", "48h", "72h"]:
-                p = predictions[label]
-                forecast_data.append({
-                    "label":    label.upper(),
-                    "aqi":      p["aqi"],
-                    "ci_lower": p.get("ci_lower", p["aqi"] * 0.95),
-                    "ci_upper": p.get("ci_upper", p["aqi"] * 1.05),
-                })
-            fdf = pd.DataFrame(forecast_data)
+    st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
 
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=fdf["label"], y=fdf["ci_upper"], mode="lines",
-                line=dict(dash="dot", width=1, color="rgba(139,148,158,0.15)"),
-                showlegend=False,
-            ))
-            fig.add_trace(go.Scatter(
-                x=fdf["label"], y=fdf["ci_lower"], mode="lines",
-                line=dict(dash="dot", width=1, color="rgba(139,148,158,0.15)"),
-                fill="tonexty", fillcolor="rgba(248,81,73,0.06)",
-                showlegend=False,
-            ))
-            segment_colors = ["#f85149", "#d29922", "#388bfd"]
-            for i in range(1, len(fdf)):
-                fig.add_trace(go.Scatter(
-                    x=fdf["label"].iloc[i-1:i+1],
-                    y=fdf["aqi"].iloc[i-1:i+1],
-                    mode="lines",
-                    line=dict(color=segment_colors[i-1], width=2.5),
-                    showlegend=True,
-                    name=f"{fdf['label'].iloc[i]}",
-                ))
-            fig.add_trace(go.Scatter(
-                x=fdf["label"], y=fdf["aqi"], mode="markers",
-                marker=dict(size=9, color=fdf["aqi"].apply(aqi_color),
-                            line=dict(width=2, color="#161b22")),
-                showlegend=False,
-            ))
-            apply_chart_theme(fig, height=145)
-            fig.update_layout(legend=dict(orientation="h", y=-0.3, x=0, font=dict(size=10)))
-            st.plotly_chart(fig, use_container_width=True)
+    # ── 3-Day Forecast — Explicit Key Metric Cards (like sample UI) ──
+    st.markdown("<div style='font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#6e7681; margin-bottom:12px; font-family:\"IBM Plex Sans\",sans-serif;'>Key Metrics — 3-Day AQI Forecast</div>", unsafe_allow_html=True)
+
+    forecast_labels = [
+        ("current", "TODAY'S AQI",  "↑"),
+        ("24h",     "TOMORROW",     "↑"),
+        ("48h",     "DAY +2",       "↑"),
+        ("72h",     "DAY +3",       "↑"),
+    ]
+
+    fc_cols = st.columns(4)
+    for col_obj, (label_key, display_label, arrow) in zip(fc_cols, forecast_labels):
+        p = predictions[label_key]
+        p_aqi = p["aqi"]
+        p_cat, p_color, p_desc = aqi_category(p_aqi)
+        badge_bg = p_color + "22"
+        with col_obj:
+            st.markdown(f"""
+            <div class="forecast-card" style="--card-accent:{p_color};">
+                <div class="fc-label">{display_label}</div>
+                <div class="fc-value" style="color:{p_color};">{p_aqi:.0f}</div>
+                <div class="fc-badge" style="background:{badge_bg}; color:{p_color}; border:1px solid {p_color}40;">
+                    <span class="fc-arrow">{arrow}</span>
+                    {p_cat}
+                </div>
+                <div class="fc-desc">{p_desc[:48]}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
     st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
 
