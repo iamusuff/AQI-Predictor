@@ -16,6 +16,14 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 
+import hopsworks
+from config import (
+    HOPSWORKS_API_KEY,
+    HOPSWORKS_PROJECT_NAME,
+    FEATURE_GROUP_NAME,
+    FEATURE_GROUP_VERSION,
+)
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), '..', 'models')
@@ -468,17 +476,33 @@ def get_inference():
     return run_inference(models_dir=MODELS_DIR)
 
 @st.cache_data(ttl=300)
-def get_history_data(days):
-    """Load history from Hopsworks Feature Store via inference result."""
+def get_history_data(days: int) -> pd.DataFrame:
+    """Directly connect to Hopsworks Feature Store and read from Feature Group."""
     try:
-        result = get_inference()
-        df = result.get("history", pd.DataFrame())
-        if not df.empty and "timestamp" in df.columns:
+        project = hopsworks.login(
+            api_key_value=HOPSWORKS_API_KEY,
+            project=HOPSWORKS_PROJECT_NAME,
+        )
+        fs = project.get_feature_store()
+        fg = fs.get_feature_group(
+            name=FEATURE_GROUP_NAME,
+            version=FEATURE_GROUP_VERSION,
+        )
+        df = fg.read()
+
+        if df.empty:
+            return pd.DataFrame()
+
+        # Filter by days
+        if "timestamp" in df.columns:
             df["timestamp"] = pd.to_datetime(df["timestamp"])
             cutoff = datetime.now() - timedelta(days=days)
-            return df[df["timestamp"] >= cutoff].sort_values("timestamp").reset_index(drop=True)
-        return df
-    except Exception:
+            df = df[df["timestamp"] >= cutoff]
+
+        return df.sort_values("timestamp").reset_index(drop=True)
+
+    except Exception as e:
+        st.warning(f"Hopsworks Feature Store connection failed: {e}")
         return pd.DataFrame()
 
 
