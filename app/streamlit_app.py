@@ -54,84 +54,59 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 
 /* ══════════════════════════════════════════════════════════
-   ROOT & GLOBAL — force dark everywhere
+   ROOT & GLOBAL
    ══════════════════════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; }
-
-html, body,
-[class*="css"],
-.stApp,
-.stApp > header,
-[data-testid="stAppViewContainer"],
-[data-testid="stHeader"],
-[data-testid="stToolbar"] {
+html, body, .stApp {
     font-family: 'IBM Plex Sans', sans-serif !important;
     background-color: #0d1117 !important;
     color: #c9d1d9 !important;
 }
 
-/* Kill any white backgrounds that leaked from light theme */
+/* Main content area */
 [data-testid="stAppViewContainer"] > .main,
-.main,
-section.main,
-[data-testid="stMain"],
-[data-testid="stMainBlockContainer"] {
-    background-color: #0d1117 !important;
-}
-
-/* ── MAIN CONTAINER ── */
 .main .block-container {
+    background-color: #0d1117 !important;
     padding: 1.5rem 1.8rem 3rem 1.8rem !important;
     max-width: 1380px !important;
-    background-color: #0d1117 !important;
 }
 
 /* ══════════════════════════════════════════════════════════
-   SIDEBAR — full dark, matching theme
+   SIDEBAR — targeted, safe selectors only
    ══════════════════════════════════════════════════════════ */
-section[data-testid="stSidebar"],
-section[data-testid="stSidebar"] > div,
-section[data-testid="stSidebar"] > div > div,
-section[data-testid="stSidebar"] .stSidebarContent {
-    background: #0d1117 !important;
+section[data-testid="stSidebar"] {
+    background-color: #0d1117 !important;
     border-right: 1px solid #21262d !important;
-    min-width: 220px !important;
-    max-width: 220px !important;
+}
+section[data-testid="stSidebar"] > div:first-child {
+    background-color: #0d1117 !important;
 }
 
-/* All text inside sidebar */
-section[data-testid="stSidebar"] *,
-section[data-testid="stSidebar"] p,
-section[data-testid="stSidebar"] span,
-section[data-testid="stSidebar"] label,
-section[data-testid="stSidebar"] div {
+/* Sidebar text — only p, span, label; NOT div (div controls layout) */
+section[data-testid="stSidebar"] p {
     color: #8b949e !important;
     font-family: 'IBM Plex Sans', sans-serif !important;
-    background-color: transparent !important;
+}
+section[data-testid="stSidebar"] span {
+    color: #8b949e !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
+}
+section[data-testid="stSidebar"] label {
+    color: #8b949e !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
 }
 
-/* Sidebar collapse/expand button (keyboard_double_arrow icon) */
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"],
-button[kind="header"],
-[data-testid="stSidebar"] button[data-testid="baseButton-header"] {
-    background: #161b22 !important;
+/* Sidebar collapse/expand button */
+[data-testid="collapsedControl"] {
+    background-color: #161b22 !important;
     border: 1px solid #21262d !important;
     color: #8b949e !important;
-    border-radius: 6px !important;
 }
-[data-testid="collapsedControl"] svg,
-[data-testid="stSidebarCollapsedControl"] svg,
-button[kind="header"] svg {
+[data-testid="collapsedControl"] svg {
     fill: #8b949e !important;
-    stroke: #8b949e !important;
-    color: #8b949e !important;
 }
-[data-testid="collapsedControl"]:hover,
-button[kind="header"]:hover {
-    background: #21262d !important;
+[data-testid="collapsedControl"]:hover {
+    background-color: #21262d !important;
     border-color: #ff4444 !important;
-    color: #e6edf3 !important;
 }
 
 /* Sidebar nav radio */
@@ -147,24 +122,11 @@ section[data-testid="stSidebar"] .stRadio label {
     transition: all 0.15s ease !important;
     border-left: 2px solid transparent !important;
     color: #8b949e !important;
-    display: flex !important;
-    align-items: center !important;
-    background: transparent !important;
 }
 section[data-testid="stSidebar"] .stRadio label:hover {
     background: rgba(48, 54, 61, 0.8) !important;
     color: #e6edf3 !important;
     border-left-color: #ff4444 !important;
-}
-/* Selected radio item */
-section[data-testid="stSidebar"] .stRadio label[data-baseweb="radio"]:has(input:checked),
-section[data-testid="stSidebar"] .stRadio [aria-checked="true"] ~ span,
-section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + span {
-    color: #e6edf3 !important;
-}
-/* Radio dot — hide default, use accent */
-section[data-testid="stSidebar"] .stRadio [data-testid="stWidgetLabel"] {
-    display: none !important;
 }
 section[data-testid="stSidebar"] .stRadio [role="radio"] {
     background: #21262d !important;
@@ -179,17 +141,14 @@ section[data-testid="stSidebar"] .stRadio [role="radio"][aria-checked="true"] {
 section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
     color: #6e7681 !important;
     font-size: 12px !important;
-    background: transparent !important;
 }
 section[data-testid="stSidebar"] hr {
     border-color: #21262d !important;
     margin: 0.8rem 0 !important;
 }
 
-/* Sidebar primary button */
-section[data-testid="stSidebar"] .stButton > button,
-section[data-testid="stSidebar"] button[kind="primary"],
-section[data-testid="stSidebar"] button[kind="secondary"] {
+/* Sidebar button */
+section[data-testid="stSidebar"] .stButton > button {
     background: #ff4444 !important;
     color: #ffffff !important;
     border: none !important;
@@ -215,22 +174,19 @@ section[data-testid="stSidebar"] [data-baseweb="select"] > div {
     border-radius: 6px !important;
     color: #c9d1d9 !important;
 }
-section[data-testid="stSidebar"] [data-baseweb="select"] span,
-section[data-testid="stSidebar"] [data-baseweb="select"] div {
+section[data-testid="stSidebar"] [data-baseweb="select"] span {
     color: #c9d1d9 !important;
-    background: transparent !important;
 }
 
 /* ══════════════════════════════════════════════════════════
    TOP NAVBAR / HEADER
    ══════════════════════════════════════════════════════════ */
 [data-testid="stHeader"] {
-    background: #0d1117 !important;
+    background-color: #0d1117 !important;
     border-bottom: 1px solid #21262d !important;
 }
-[data-testid="stToolbar"],
-[data-testid="stDecoration"] {
-    background: #0d1117 !important;
+[data-testid="stToolbar"] {
+    background-color: #0d1117 !important;
 }
 /* Toolbar icons */
 [data-testid="stToolbar"] button,
@@ -331,19 +287,15 @@ div[data-testid="stMetricLabel"] label,
     font-weight: 600 !important;
     font-family: 'IBM Plex Sans', sans-serif !important;
 }
-div[data-testid="stMetricValue"],
-div[data-testid="stMetricValue"] * {
+div[data-testid="stMetricValue"] {
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 22px !important;
     font-weight: 600 !important;
     color: #e6edf3 !important;
-    background: transparent !important;
 }
-div[data-testid="stMetricDelta"],
-div[data-testid="stMetricDelta"] * {
+div[data-testid="stMetricDelta"] {
     font-size: 11px !important;
     font-family: 'IBM Plex Mono', monospace !important;
-    background: transparent !important;
 }
 /* delta up = green, down = red */
 div[data-testid="stMetricDelta"][data-direction="up"] {
@@ -876,9 +828,7 @@ hr {
 /* ══════════════════════════════════════════════════════════
    HIDE STREAMLIT BRANDING
    ══════════════════════════════════════════════════════════ */
-#MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
-[data-testid="stDecoration"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
