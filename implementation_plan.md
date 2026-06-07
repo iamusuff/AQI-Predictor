@@ -10,7 +10,7 @@ Predict the Air Quality Index (AQI) for the next 3 days using a 100% serverless 
 graph LR
     subgraph Data Sources
         A["AQICN API"] --> FP
-        B["OpenWeather API"] --> FP
+        B["OpenMeteo API"] --> FP
     end
 
     subgraph Feature Pipeline
@@ -79,7 +79,7 @@ AQI_Predictor/
 
 | Layer | Tool | Rationale |
 |-------|------|-----------|
-| **Data APIs** | AQICN + OpenWeatherMap | AQICN gives real-time AQI & pollutants; OpenWeather provides weather context (temp, humidity, wind). Both have free tiers. |
+| **Data APIs** | AQICN + OpenMeteo | AQICN gives real-time AQI & pollutants; OpenMeteo provides weather context (temp, humidity, wind). Both are free (OpenMeteo requires no API key). |
 | **Feature Store** | Hopsworks (free tier) | Purpose-built ML feature store with versioning, time-travel, and a model registry — all free for serverless tier. |
 | **ML Models** | Scikit-learn + TensorFlow | Scikit-learn for baselines (Random Forest, Ridge); TensorFlow for LSTM/GRU deep learning models. |
 | **Explainability** | SHAP | Works with both sklearn and TF models; generates intuitive feature importance plots. |
@@ -104,7 +104,7 @@ AQI_Predictor/
 
 #### [NEW] [.env.example](file:///c:/Users/user/Desktop/AQI_Predictor/.env.example)
 - `AQICN_API_KEY` — from https://aqicn.org/data-platform/token/
-- `OPENWEATHER_API_KEY` — from https://openweathermap.org/api
+- OpenMeteo — FREE, no API key required! (https://open-meteo.com/)
 - `HOPSWORKS_API_KEY` — from https://app.hopsworks.ai/
 - `CITY` — target city (e.g., `lahore` or `karachi`)
 
@@ -115,10 +115,10 @@ AQI_Predictor/
 
 #### Tasks:
 - [ ] Register for AQICN API token
-- [ ] Register for OpenWeatherMap API key
 - [ ] Create free Hopsworks account & get API key
 - [ ] Create virtual environment & install dependencies
 - [ ] Initialize git repository
+- [ ] Note: OpenMeteo requires no registration or API key!
 
 ---
 
@@ -127,7 +127,8 @@ AQI_Predictor/
 
 #### [NEW] [src/utils.py](file:///c:/Users/user/Desktop/AQI_Predictor/src/utils.py)
 - `fetch_aqicn_data(city)` → returns pollutant concentrations (PM2.5, PM10, O3, NO2, SO2, CO) and current AQI
-- `fetch_openweather_data(lat, lon)` → returns temperature, humidity, wind speed, pressure, weather description
+- `fetch_openmeteo_weather(lat, lon, start_date, end_date)` → returns temperature, humidity, wind speed, pressure, visibility, clouds (free, no API key!)
+- `fetch_openmeteo_aqi(lat, lon, start_date, end_date)` → returns historical air quality data
 - `compute_features(raw_data)` → engineers the following features:
   - **Time features**: hour, day_of_week, month, is_weekend, season
   - **Pollutant features**: PM2.5, PM10, O3, NO2, SO2, CO
@@ -136,7 +137,7 @@ AQI_Predictor/
 - `compute_aqi_target(pollutant_data)` → computes AQI using EPA breakpoints (if needed)
 
 #### [NEW] [src/feature_pipeline.py](file:///c:/Users/user/Desktop/AQI_Predictor/src/feature_pipeline.py)
-1. Call `fetch_aqicn_data()` and `fetch_openweather_data()`
+1. Call `fetch_aqicn_data()` and `fetch_openmeteo_weather()`
 2. Merge raw data into a single DataFrame
 3. Call `compute_features()` to engineer model inputs
 4. Define target: AQI for t+24h, t+48h, t+72h (next 3 days)
@@ -144,7 +145,7 @@ AQI_Predictor/
 6. Insert feature row into the Feature Group (with event timestamp)
 
 > [!IMPORTANT]
-> **API Rate Limits**: AQICN free tier allows ~1000 calls/day. OpenWeather free tier allows 1000 calls/day. Running hourly (24 calls/day) is well within limits.
+> **API Rate Limits**: AQICN free tier allows ~1000 calls/day. OpenMeteo has no API key and allows 10,000 requests/day. Running hourly (24 calls/day) is well within limits for both services.
 
 ---
 
@@ -152,8 +153,9 @@ AQI_Predictor/
 > **Goal**: Generate training data by backfilling features for past dates.
 
 #### [NEW] [src/backfill.py](file:///c:/Users/user/Desktop/AQI_Predictor/src/backfill.py)
-- Strategy 1: Use OpenWeather's **historical weather API** (One Call 3.0 with timemachine) for past weather data
-- Strategy 2: Use AQICN's historical data (if available) or alternative sources like OpenAQ
+- Strategy 1: Use OpenMeteo's **Archive API** (free, no API key) for historical weather data
+- Strategy 2: Use OpenMeteo's **Air Quality API** for historical pollutant data
+- AQI computed from pollutants using EPA breakpoints
 - Loop through past 90–180 days, fetch data, compute features, and bulk insert into Hopsworks
 - Save a local CSV backup in `data/backfill/` for reproducibility
 - Include progress bars and error handling for long-running backfill
@@ -268,7 +270,7 @@ schedule:
   - cron: '0 * * * *'  # Every hour at minute 0
 ```
 - Checkout repo → install deps → run `src/feature_pipeline.py`
-- Secrets: `AQICN_API_KEY`, `OPENWEATHER_API_KEY`, `HOPSWORKS_API_KEY`
+- Secrets: `AQICN_API_KEY`, `HOPSWORKS_API_KEY` (OpenMeteo requires no API key)
 
 #### [NEW] [.github/workflows/training_pipeline.yml](file:///c:/Users/user/Desktop/AQI_Predictor/.github/workflows/training_pipeline.yml)
 ```yaml

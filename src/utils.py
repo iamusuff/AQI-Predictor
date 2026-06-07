@@ -525,6 +525,40 @@ def fetch_openmeteo_aqi(lat: float, lon: float, start_date: str, end_date: str):
         return None
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Hopsworks Connection (Centralized)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def connect_to_hopsworks():
+    """
+    Connect to Hopsworks Feature Store.
+    
+    Returns:
+        (project, feature_store) tuple, or (None, None) on failure
+    """
+    try:
+        import hopsworks
+        from config import HOPSWORKS_API_KEY, HOPSWORKS_PROJECT_NAME
+
+        logger.info("Connecting to Hopsworks...")
+        project = hopsworks.login(
+            host="eu-west.cloud.hopsworks.ai",
+            api_key_value=HOPSWORKS_API_KEY,
+            project=HOPSWORKS_PROJECT_NAME
+        )
+
+        feature_store = project.get_feature_store()
+        logger.info(f"✅ Connected to Hopsworks project: {HOPSWORKS_PROJECT_NAME}")
+        return project, feature_store
+
+    except ImportError:
+        logger.warning("⚠️  Hopsworks library not installed. Features will be saved locally.")
+        return None, None
+    except Exception as e:
+        logger.error(f"❌ Failed to connect to Hopsworks: {e}")
+        return None, None
+
+
 if __name__ == "__main__":
     # Test API functions
     print("=== Testing API Functions ===\n")
