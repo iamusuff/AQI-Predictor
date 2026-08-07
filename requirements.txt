@@ -12,7 +12,7 @@ catboost==1.2.8
 hopsworks==3.7.0
 hsfs==3.7.9
 hsml==3.7.2
-confluent-kafka==2.6.1
+# confluent-kafka==2.6.1
 
 # ── Progress Bars & Stats ────────────────────────────────────
 
